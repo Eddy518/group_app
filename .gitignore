@@ -1,0 +1,6 @@
+node_modules/
+.env
+TODO.md
+__pycache__/
+ui/
+uploads/

@@ -1,0 +1,149 @@
+{% extends "base.html" %} {% block body %}
+<style>
+    /* Hide scrollbar for Chrome, Safari and Opera */
+    .custom-scrollbar::-webkit-scrollbar {
+        width: 6px;
+    }
+
+    .custom-scrollbar::-webkit-scrollbar-track {
+        background: transparent;
+    }
+
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+        background-color: rgba(156, 163, 175, 0.3);
+        border-radius: 3px;
+    }
+
+    .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+        background-color: rgba(156, 163, 175, 0.5);
+    }
+
+    /* Hide scrollbar for IE, Edge and Firefox */
+    .custom-scrollbar {
+        scrollbar-width: thin;
+        scrollbar-color: rgba(156, 163, 175, 0.3) transparent;
+    }
+</style>
+
+<div class="flex h-[calc(100vh-7rem)] mt-16 fixed w-full">
+    <!-- Left sidebar - Members list -->
+    <div
+        class="w-64 bg-[#19212c] border-r border-gray-700 hidden md:flex md:flex-col"
+    >
+        <div class="p-4 border-b border-gray-700 flex-shrink-0">
+            <h2 class="text-lg font-semibold text-white">Group Members</h2>
+        </div>
+        <!-- Scrollable member list -->
+        <div class="overflow-y-auto flex-1 custom-scrollbar">
+            <div class="p-3">
+                <div class="space-y-3">
+                    <!-- Online members -->
+                    {% for i in range(20) %}
+                    <div
+                        class="flex items-center space-x-3 p-2 hover:bg-gray-700 rounded-lg cursor-pointer"
+                    >
+                        <div class="relative">
+                            <img
+                                src="https://ui-avatars.com/api/?name=John+Doe"
+                                class="w-8 h-8 rounded-full"
+                            />
+                            <span
+                                class="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-[#19212c] rounded-full"
+                            ></span>
+                        </div>
+                        <span class="text-gray-300">John Doe</span>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main chat area -->
+    <div class="flex-1 flex flex-col bg-[#0e131f] overflow-hidden">
+        <!-- Chat header -->
+        <div class="bg-[#19212c] border-b border-gray-700 p-4 flex-shrink-0">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center space-x-3">
+                    <h2 class="text-xl font-semibold text-white">Group Name</h2>
+                    <span class="text-sm text-gray-400">3 members</span>
+                </div>
+                <div class="flex items-center space-x-3">
+                    <button class="text-gray-400 hover:text-white">
+                        <i class="fas fa-search"></i>
+                    </button>
+                    <button class="text-gray-400 hover:text-white">
+                        <i class="fas fa-ellipsis-v"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Messages area -->
+        <div class="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar">
+            <!-- Messages -->
+            {% for i in range(20) %}
+            <div class="flex items-start space-x-3">
+                <img
+                    src="https://ui-avatars.com/api/?name=John+Doe"
+                    class="w-8 h-8 rounded-full"
+                />
+                <div>
+                    <div class="flex items-center space-x-2">
+                        <span class="text-gray-300 font-medium">John Doe</span>
+                        <span class="text-gray-500 text-xs">12:30 PM</span>
+                    </div>
+                    <div
+                        class="mt-1 bg-[#19212c] text-gray-300 p-3 rounded-lg max-w-md"
+                    >
+                        Message {{i}}: Hey there! How are you doing today?
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex items-start justify-end space-x-3">
+                <div class="flex flex-col items-end">
+                    <div class="flex items-center space-x-2">
+                        <span class="text-gray-500 text-xs">12:32 PM</span>
+                        <span class="text-gray-300 font-medium">You</span>
+                    </div>
+                    <div
+                        class="mt-1 bg-blue-600 text-white p-3 rounded-lg max-w-md"
+                    >
+                        Response {{i}}: Hi! I'm doing great, thanks for asking.
+                        How about you?
+                    </div>
+                </div>
+                <img
+                    src="https://ui-avatars.com/api/?name=Current+User"
+                    class="w-8 h-8 rounded-full"
+                />
+            </div>
+            {% endfor %}
+        </div>
+
+        <!-- Message input area -->
+        <div
+            class="bg-[#19212c] border-t border-gray-700 p-4 flex-shrink-0 mb-3"
+        >
+            <div class="flex items-center space-x-3">
+                <button class="text-gray-400 hover:text-white">
+                    <i class="fas fa-paperclip"></i>
+                </button>
+                <div class="flex-1">
+                    <input
+                        type="text"
+                        class="w-full bg-gray-700 text-gray-200 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        placeholder="Type your message..."
+                    />
+                </div>
+                <button
+                    class="bg-blue-600 text-white rounded-lg px-4 py-2 hover:bg-blue-700 transition duration-200"
+                >
+                    <i class="fas fa-paper-plane"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock body %}

@@ -1,0 +1,87 @@
+{% extends "base.html" %} {% block body %}
+<section class="bg-gray-50">
+    <div
+        class="flex flex-col items-center justify-center px-6 py-8 mx-auto md:h-screen lg:py-0"
+    >
+        <div
+            class="w-full bg-white rounded-lg shadow md:mt-0 sm:max-w-md xl:p-0"
+        >
+            <div class="p-6 space-y-4 md:space-y-6 sm:p-8">
+                <h1
+                    class="text-xl font-bold leading-tight tracking-tight text-gray-900 md:text-2xl text-center"
+                >
+                    Email Verification
+                </h1>
+                <div class="flex flex-col items-center space-y-4">
+                    <p class="text-sm text-gray-600 text-center">
+                        Please enter the verification code that was sent to your
+                        email address. Code expires in
+                        <span id="timer">2:00</span>.
+                    </p>
+                    <form method="POST" class="space-y-4 w-full">
+                        {{ form.csrf_token }}
+                        <div>
+                            {{ form.token( id="verification_code",
+                            class="bg-gray-50 border border-gray-300
+                            text-gray-900 sm:text-sm rounded-lg
+                            focus:ring-blue-600 focus:border-blue-600 block
+                            w-full p-2.5", placeholder="Enter verification
+                            code", required=True ) }}
+                        </div>
+                        <button
+                            type="submit"
+                            class="w-full text-white bg-blue-600 hover:bg-blue-700 focus:ring-4 focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center"
+                        >
+                            Verify Code
+                        </button>
+                        <a
+                            href="{{ url_for('two_factor', resend=True) }}"
+                            class="w-full"
+                        >
+                            <button
+                                type="button"
+                                class="w-full text-white bg-blue-600 hover:bg-blue-700 focus:ring-4 focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center"
+                            >
+                                Resend Code
+                            </button>
+                        </a>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<script>
+    // Timer functionality
+    function startTimer(duration, display) {
+        let timer = duration;
+        const interval = setInterval(function () {
+            const minutes = parseInt(timer / 60, 10);
+            const seconds = parseInt(timer % 60, 10);
+
+            display.textContent =
+                minutes + ":" + (seconds < 10 ? "0" : "") + seconds;
+
+            if (--timer < 0) {
+                clearInterval(interval);
+                display.textContent = "Expired";
+                // Disable the verify button
+                document.querySelector('button[type="submit"]').disabled = true;
+                document
+                    .querySelector('button[type="submit"]')
+                    .classList.add("bg-gray-400");
+                document
+                    .querySelector('button[type="submit"]')
+                    .classList.remove("bg-blue-600", "hover:bg-blue-700");
+            }
+        }, 1000);
+    }
+
+    window.onload = function () {
+        const twoMinutes = 120;
+        const display = document.querySelector("#timer");
+        startTimer(twoMinutes, display);
+    };
+</script>
+{% endblock body %}

@@ -1,0 +1,370 @@
+{% extends "base.html" %} {% block body %}
+<style>
+    /* Hide scrollbar for Chrome, Safari and Opera */
+    .custom-scrollbar::-webkit-scrollbar {
+        width: 6px;
+    }
+
+    .custom-scrollbar::-webkit-scrollbar-track {
+        background: transparent;
+    }
+
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+        background-color: rgba(156, 163, 175, 0.3);
+        border-radius: 3px;
+    }
+
+    .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+        background-color: rgba(156, 163, 175, 0.5);
+    }
+
+    /* Hide scrollbar for IE, Edge and Firefox */
+    .custom-scrollbar {
+        scrollbar-width: thin;
+        scrollbar-color: rgba(156, 163, 175, 0.3) transparent;
+    }
+</style>
+<div class="container mx-auto p-8 mt-12">
+    <h1
+        class="text-4xl font-bold mb-8 text-center bg-gradient-to-r from-blue-500 to-purple-500 text-white"
+    >
+        All Groups
+    </h1>
+
+    <div class="flex justify-center gap-4 mb-12">
+        <select
+            class="bg-[#19212c] text-white px-6 py-3 rounded-lg border border-gray-700 hover:border-blue-500 transition-colors duration-200"
+        >
+            <option value="">Sort by...</option>
+            <option value="date">Date</option>
+            <option value="name">Name</option>
+        </select>
+
+        <select
+            class="bg-[#19212c] text-white px-6 py-3 rounded-lg border border-gray-700 hover:border-blue-500 transition-colors duration-200"
+        >
+            <option value="">Filter by tag...</option>
+            <option value="ml">Machine Learning</option>
+            <option value="web">Web Development</option>
+            <option value="mobile">Mobile Development</option>
+        </select>
+    </div>
+
+    <h2
+        class="font-bold text-2xl mb-1 text-center bg-gradient-to-r from-blue-500 to-purple-500 text-white"
+    >
+        Computer Science
+    </h2>
+    <div
+        class="custom-scrollbar overflow-hidden scrollbar-thin scrollbar-thumb-[#19212c] scrollbar-track-transparent"
+    >
+        <div class="relative flex items-center">
+            <button
+                onclick="document.querySelector('.cards-container').scrollBy({left: -320, behavior: 'smooth'})"
+                class="absolute left-0 z-10 p-2 text-white bg-[#19212c] rounded-full shadow-lg hover:bg-blue-500 transition-colors"
+            >
+                <i class="fas fa-chevron-left"></i>
+            </button>
+
+            <div
+                class="cards-container flex gap-6 p-6 snap-x snap-mandatory overflow-x-scroll scrollbar-thin scrollbar-thumb-[#19212c] scrollbar-track-transparent"
+            >
+                <div
+                    class="snap-center flex-shrink-0 w-80 hover:cursor-pointer rounded-xl shadow-lg p-4 bg-[#19212c] border border-gray-800 hover:border-blue-500 transition-all duration-300 transform hover:-translate-y-1"
+                >
+                    <img
+                        src="{{ url_for('static', filename='assets/header.png') }}"
+                        alt="Card image"
+                        class="w-full h-32 object-cover mb-4 rounded-lg shadow-md"
+                    />
+                    <h2 class="text-xl font-bold mb-2 text-white">
+                        Machine Learning Group
+                    </h2>
+                    <p class="text-gray-300 text-sm leading-relaxed">
+                        Revamping learning with discovering new models and
+                        training
+                    </p>
+                    <div class="flex flex-wrap gap-2 mt-4">
+                        <span
+                            class="px-2 py-1 bg-gradient-to-r from-blue-500 to-purple-500 text-white text-xs rounded-full font-medium hover:border bg-pink-300"
+                            >ai</span
+                        >
+                        <span
+                            class="px-2 py-1 bg-gradient-to-r from-blue-500 to-purple-500 text-white text-xs rounded-full font-medium hover:border bg-pink-300"
+                            >machine learning</span
+                        >
+                    </div>
+                </div>
+                <div
+                    class="snap-center flex-shrink-0 w-80 rounded-xl shadow-lg p-4 bg-[#19212c] border border-gray-800 hover:border-blue-500 transition-all duration-300 transform hover:-translate-y-1"
+                >
+                    <img
+                        src="{{ url_for('static', filename='assets/header.png') }}"
+                        alt="Card image"
+                        class="w-full h-32 object-cover mb-4 rounded-lg shadow-md"
+                    />
+                    <h2 class="text-xl font-bold mb-2 text-white">
+                        Web Dev Group
+                    </h2>
+                    <p class="text-gray-300 text-sm leading-relaxed">
+                        Building modern web applications using cutting-edge
+                        technologies
+                    </p>
+                    <div class="flex flex-wrap gap-2 mt-4">
+                        <span
+                            class="px-2 py-1 bg-gradient-to-r from-blue-500 to-purple-500 text-white text-xs rounded-full font-medium hover:border bg-pink-300"
+                            >web</span
+                        >
+                        <span
+                            class="px-2 py-1 bg-gradient-to-r from-blue-500 to-purple-500 text-white text-xs rounded-full font-medium hover:border bg-pink-300"
+                            >javascript</span
+                        >
+                    </div>
+                </div>
+                <div
+                    class="snap-center flex-shrink-0 w-80 rounded-xl shadow-lg p-4 bg-[#19212c] border border-gray-800 hover:border-blue-500 transition-all duration-300 transform hover:-translate-y-1"
+                >
+                    <img
+                        src="{{ url_for('static', filename='assets/header.png') }}"
+                        alt="Card image"
+                        class="w-full h-32 object-cover mb-4 rounded-lg shadow-md"
+                    />
+                    <h2 class="text-xl font-bold mb-2 text-white">
+                        Mobile Dev Group
+                    </h2>
+                    <p class="text-gray-300 text-sm leading-relaxed">
+                        Creating innovative mobile applications for iOS and
+                        Android
+                    </p>
+                    <div class="flex flex-wrap gap-2 mt-4">
+                        <span
+                            class="px-2 py-1 bg-gradient-to-r from-blue-500 to-purple-500 text-white text-xs rounded-full font-medium hover:border bg-pink-300"
+                            >mobile</span
+                        >
+                        <span
+                            class="px-2 py-1 bg-gradient-to-r from-blue-500 to-purple-500 text-white text-xs rounded-full font-medium hover:border bg-pink-300"
+                            >app development</span
+                        >
+                    </div>
+                </div>
+                <div
+                    class="snap-center flex-shrink-0 w-80 rounded-xl shadow-lg p-4 bg-[#19212c] border border-gray-800 hover:border-blue-500 transition-all duration-300 transform hover:-translate-y-1"
+                >
+                    <img
+                        src="{{ url_for('static', filename='assets/header.png') }}"
+                        alt="Card image"
+                        class="w-full h-32 object-cover mb-4 rounded-lg shadow-md"
+                    />
+                    <h2 class="text-xl font-bold mb-2 text-white">
+                        Data Science Group
+                    </h2>
+                    <p class="text-gray-300 text-sm leading-relaxed">
+                        Exploring data analytics and statistical modeling
+                    </p>
+                    <div class="flex flex-wrap gap-2 mt-4">
+                        <span
+                            class="px-2 py-1 bg-gradient-to-r from-blue-500 to-purple-500 text-white text-xs rounded-full font-medium hover:border bg-pink-300"
+                            >data science</span
+                        >
+                        <span
+                            class="px-2 py-1 bg-gradient-to-r from-blue-500 to-purple-500 text-white text-xs rounded-full font-medium hover:border bg-pink-300"
+                            >analytics</span
+                        >
+                    </div>
+                </div>
+                <div
+                    class="snap-center flex-shrink-0 w-80 rounded-xl shadow-lg p-4 bg-[#19212c] border border-gray-800 hover:border-blue-500 transition-all duration-300 transform hover:-translate-y-1"
+                >
+                    <img
+                        src="{{ url_for('static', filename='assets/header.png') }}"
+                        alt="Card image"
+                        class="w-full h-32 object-cover mb-4 rounded-lg shadow-md"
+                    />
+                    <h2 class="text-xl font-bold mb-2 text-white">
+                        Cybersecurity Group
+                    </h2>
+                    <p class="text-gray-300 text-sm leading-relaxed">
+                        Learning about network security and ethical hacking
+                    </p>
+                    <div class="flex flex-wrap gap-2 mt-4">
+                        <span
+                            class="px-2 py-1 bg-gradient-to-r from-blue-500 to-purple-500 text-white text-xs rounded-full font-medium hover:border bg-pink-300"
+                            >security</span
+                        >
+                        <span
+                            class="px-2 py-1 bg-gradient-to-r from-blue-500 to-purple-500 text-white text-xs rounded-full font-medium hover:border bg-pink-300"
+                            >networking</span
+                        >
+                    </div>
+                </div>
+            </div>
+
+            <button
+                onclick="document.querySelector('.cards-container').scrollBy({left: 320, behavior: 'smooth'})"
+                class="absolute right-0 z-10 p-2 text-white bg-[#19212c] rounded-full shadow-lg hover:bg-blue-500 transition-colors"
+            >
+                <i class="fas fa-chevron-right"></i>
+            </button>
+        </div>
+    </div>
+
+    <h2
+        class="font-bold text-2xl mb-3 text-center bg-gradient-to-r from-blue-500 to-purple-500 text-white mt-3"
+    >
+        Education
+    </h2>
+
+    <div
+        class="overflow-hidden scrollbar-thin scrollbar-thumb-[#19212c] scrollbar-track-transparent"
+    >
+        <div class="relative flex items-center">
+            <button
+                onclick="document.querySelector('.cards-container').scrollBy({left: -320, behavior: 'smooth'})"
+                class="absolute left-0 z-10 p-2 text-white bg-[#19212c] rounded-full shadow-lg hover:bg-blue-500 transition-colors"
+            >
+                <i class="fas fa-chevron-left"></i>
+            </button>
+
+            <div
+                class="cards-container flex gap-6 p-6 snap-x snap-mandatory overflow-x-scroll scrollbar-thin scrollbar-thumb-[#19212c] scrollbar-track-transparent"
+            >
+                <div
+                    class="snap-center flex-shrink-0 w-80 hover:cursor-pointer rounded-xl shadow-lg p-4 bg-[#19212c] border border-gray-800 hover:border-blue-500 transition-all duration-300 transform hover:-translate-y-1"
+                >
+                    <img
+                        src="{{ url_for('static', filename='assets/header.png') }}"
+                        alt="Card image"
+                        class="w-full h-32 object-cover mb-4 rounded-lg shadow-md"
+                    />
+                    <h2 class="text-xl font-bold mb-2 text-white">
+                        Machine Learning Group
+                    </h2>
+                    <p class="text-gray-300 text-sm leading-relaxed">
+                        Revamping learning with discovering new models and
+                        training
+                    </p>
+                    <div class="flex flex-wrap gap-2 mt-4">
+                        <span
+                            class="px-2 py-1 bg-gradient-to-r from-blue-500 to-purple-500 text-white text-xs rounded-full font-medium hover:border bg-pink-300"
+                            >ai</span
+                        >
+                        <span
+                            class="px-2 py-1 bg-gradient-to-r from-blue-500 to-purple-500 text-white text-xs rounded-full font-medium hover:border bg-pink-300"
+                            >machine learning</span
+                        >
+                    </div>
+                </div>
+                <div
+                    class="snap-center flex-shrink-0 w-80 rounded-xl shadow-lg p-4 bg-[#19212c] border border-gray-800 hover:border-blue-500 transition-all duration-300 transform hover:-translate-y-1"
+                >
+                    <img
+                        src="{{ url_for('static', filename='assets/header.png') }}"
+                        alt="Card image"
+                        class="w-full h-32 object-cover mb-4 rounded-lg shadow-md"
+                    />
+                    <h2 class="text-xl font-bold mb-2 text-white">
+                        Web Dev Group
+                    </h2>
+                    <p class="text-gray-300 text-sm leading-relaxed">
+                        Building modern web applications using cutting-edge
+                        technologies
+                    </p>
+                    <div class="flex flex-wrap gap-2 mt-4">
+                        <span
+                            class="px-2 py-1 bg-gradient-to-r from-blue-500 to-purple-500 text-white text-xs rounded-full font-medium hover:border bg-pink-300"
+                            >web</span
+                        >
+                        <span
+                            class="px-2 py-1 bg-gradient-to-r from-blue-500 to-purple-500 text-white text-xs rounded-full font-medium hover:border bg-pink-300"
+                            >javascript</span
+                        >
+                    </div>
+                </div>
+                <div
+                    class="snap-center flex-shrink-0 w-80 rounded-xl shadow-lg p-4 bg-[#19212c] border border-gray-800 hover:border-blue-500 transition-all duration-300 transform hover:-translate-y-1"
+                >
+                    <img
+                        src="{{ url_for('static', filename='assets/header.png') }}"
+                        alt="Card image"
+                        class="w-full h-32 object-cover mb-4 rounded-lg shadow-md"
+                    />
+                    <h2 class="text-xl font-bold mb-2 text-white">
+                        Mobile Dev Group
+                    </h2>
+                    <p class="text-gray-300 text-sm leading-relaxed">
+                        Creating innovative mobile applications for iOS and
+                        Android
+                    </p>
+                    <div class="flex flex-wrap gap-2 mt-4">
+                        <span
+                            class="px-2 py-1 bg-gradient-to-r from-blue-500 to-purple-500 text-white text-xs rounded-full font-medium hover:border bg-pink-300"
+                            >mobile</span
+                        >
+                        <span
+                            class="px-2 py-1 bg-gradient-to-r from-blue-500 to-purple-500 text-white text-xs rounded-full font-medium hover:border bg-pink-300"
+                            >app development</span
+                        >
+                    </div>
+                </div>
+                <div
+                    class="snap-center flex-shrink-0 w-80 rounded-xl shadow-lg p-4 bg-[#19212c] border border-gray-800 hover:border-blue-500 transition-all duration-300 transform hover:-translate-y-1"
+                >
+                    <img
+                        src="{{ url_for('static', filename='assets/header.png') }}"
+                        alt="Card image"
+                        class="w-full h-32 object-cover mb-4 rounded-lg shadow-md"
+                    />
+                    <h2 class="text-xl font-bold mb-2 text-white">
+                        Data Science Group
+                    </h2>
+                    <p class="text-gray-300 text-sm leading-relaxed">
+                        Exploring data analytics and statistical modeling
+                    </p>
+                    <div class="flex flex-wrap gap-2 mt-4">
+                        <span
+                            class="px-2 py-1 bg-gradient-to-r from-blue-500 to-purple-500 text-white text-xs rounded-full font-medium hover:border bg-pink-300"
+                            >data science</span
+                        >
+                        <span
+                            class="px-2 py-1 bg-gradient-to-r from-blue-500 to-purple-500 text-white text-xs rounded-full font-medium hover:border bg-pink-300"
+                            >analytics</span
+                        >
+                    </div>
+                </div>
+                <div
+                    class="snap-center flex-shrink-0 w-80 rounded-xl shadow-lg p-4 bg-[#19212c] border border-gray-800 hover:border-blue-500 transition-all duration-300 transform hover:-translate-y-1"
+                >
+                    <img
+                        src="{{ url_for('static', filename='assets/header.png') }}"
+                        alt="Card image"
+                        class="w-full h-32 object-cover mb-4 rounded-lg shadow-md"
+                    />
+                    <h2 class="text-xl font-bold mb-2 text-white">
+                        Cybersecurity Group
+                    </h2>
+                    <p class="text-gray-300 text-sm leading-relaxed">
+                        Learning about network security and ethical hacking
+                    </p>
+                    <div class="flex flex-wrap gap-2 mt-4">
+                        <span
+                            class="px-2 py-1 bg-gradient-to-r from-blue-500 to-purple-500 text-white text-xs rounded-full font-medium hover:border bg-pink-300"
+                            >security</span
+                        >
+                        <span
+                            class="px-2 py-1 bg-gradient-to-r from-blue-500 to-purple-500 text-white text-xs rounded-full font-medium hover:border bg-pink-300"
+                            >networking</span
+                        >
+                    </div>
+                </div>
+            </div>
+
+            <button
+                onclick="document.querySelector('.cards-container').scrollBy({left: 320, behavior: 'smooth'})"
+                class="absolute right-0 z-10 p-2 text-white bg-[#19212c] rounded-full shadow-lg hover:bg-blue-500 transition-colors"
+            >
+                <i class="fas fa-chevron-right"></i>
+            </button>
+        </div>
+    </div>
+</div>
+{% endblock body %}
