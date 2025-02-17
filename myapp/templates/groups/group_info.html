@@ -1,0 +1,132 @@
+{% extends "base.html" %} {% block body %}
+<div class="min-h-screen p-8 mt-16 bg-[#0e131f] text-white">
+    <div class="max-w-4xl mx-auto">
+        <!-- Group Header -->
+        <div class="bg-[#19212c] rounded-lg shadow-lg overflow-hidden">
+            <!-- Group Banner/Image -->
+            <div
+                class="h-48 bg-gradient-to-r from-blue-500 to-purple-500 relative"
+            >
+                <img
+                    src="{{ url_for('static', filename='assets/header.png') }}"
+                    alt="Group Banner"
+                    class="w-full h-full object-cover opacity-50"
+                />
+                <!-- Group Icon -->
+                <div class="absolute -bottom-16 left-8">
+                    <div
+                        class="w-32 h-32 rounded-full border-4 border-[#19212c] overflow-hidden bg-[#19212c]"
+                    >
+                        <img
+                            src="{{ url_for('static', filename='assets/header.png') }}"
+                            alt="Group Icon"
+                            class="w-full h-full object-cover"
+                        />
+                    </div>
+                </div>
+            </div>
+
+            <!-- Group Info Section -->
+            <div class="pt-20 px-8 pb-8">
+                <div class="flex justify-between items-start">
+                    <div>
+                        <h1 class="text-3xl font-bold">
+                            Machine Learning Study Group
+                        </h1>
+                        <p class="text-gray-400 mt-2">
+                            Created on January 15, 2024
+                        </p>
+                    </div>
+                    <a
+                        href="{{ url_for('chat_group') }}"
+                        class="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition duration-300 flex items-center space-x-2"
+                    >
+                        <i class="fas fa-comments"></i>
+                        <span>Proceed to Chat</span>
+                    </a>
+                </div>
+
+                <!-- Group Owner -->
+                <div class="mt-6 flex items-center space-x-3">
+                    <div class="flex items-center space-x-3">
+                        <img
+                            src="https://ui-avatars.com/api/?name=John+Doe"
+                            class="w-10 h-10 rounded-full border-2 border-blue-500"
+                        />
+                        <div>
+                            <p class="text-sm text-gray-400">Group Owner</p>
+                            <p class="font-medium">John Doe</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Group Stats -->
+                <div class="mt-8 grid grid-cols-2 gap-4">
+                    <div class="bg-[#0e131f] p-4 rounded-lg text-center">
+                        <p class="text-2xl font-bold">24</p>
+                        <p class="text-gray-400">Members</p>
+                    </div>
+                    <div class="bg-[#0e131f] p-4 rounded-lg text-center">
+                        <p class="text-2xl font-bold">156</p>
+                        <p class="text-gray-400">Messages</p>
+                    </div>
+                </div>
+
+                <!-- Group Description -->
+                <div class="mt-8">
+                    <h2 class="text-xl font-semibold mb-4">About this group</h2>
+                    <p class="text-gray-300 leading-relaxed">
+                        A dedicated study group for machine learning
+                        enthusiasts. We discuss various ML concepts, share
+                        resources, work on projects together, and help each
+                        other learn and grow in the field of machine learning
+                        and artificial intelligence.
+                    </p>
+                </div>
+
+                <!-- Group Tags -->
+                <div class="mt-6">
+                    <h2 class="text-xl font-semibold mb-4">Tags</h2>
+                    <div class="flex flex-wrap gap-2">
+                        <span
+                            class="px-3 py-1 bg-blue-500/10 text-blue-400 rounded-full text-sm"
+                            >#machinelearning</span
+                        >
+                        <span
+                            class="px-3 py-1 bg-blue-500/10 text-blue-400 rounded-full text-sm"
+                            >#ai</span
+                        >
+                        <span
+                            class="px-3 py-1 bg-blue-500/10 text-blue-400 rounded-full text-sm"
+                            >#python</span
+                        >
+                        <span
+                            class="px-3 py-1 bg-blue-500/10 text-blue-400 rounded-full text-sm"
+                            >#datascience</span
+                        >
+                    </div>
+                </div>
+
+                <!-- Recent Members -->
+                <div class="mt-8">
+                    <h2 class="text-xl font-semibold mb-4">Recent Members</h2>
+                    <div class="flex -space-x-2">
+                        {% for i in range(5) %}
+                        <img
+                            src="https://ui-avatars.com/api/?name=Member+{{i}}"
+                            class="w-10 h-10 rounded-full border-2 border-[#19212c]"
+                            title="Member {{i}}"
+                        />
+                        {% endfor %}
+                        <div
+                            class="w-10 h-10 rounded-full border-2 border-[#19212c] bg-gray-700 flex items-center justify-center text-sm"
+                        >
+                            +18
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock body %}

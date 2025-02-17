@@ -57,6 +57,11 @@ def chat_group():
     return render_template("groups/group_chat.html")
 
 
+@app.route("/group/info")
+def group_info():
+    return render_template("groups/group_info.html")
+
+
 def send_token_email(tk):
     verification_code = tk
     print(session)

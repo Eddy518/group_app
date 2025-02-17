@@ -69,32 +69,34 @@
             <div
                 class="cards-container flex gap-6 p-6 snap-x snap-mandatory overflow-x-scroll scrollbar-thin scrollbar-thumb-[#19212c] scrollbar-track-transparent"
             >
-                <div
-                    class="snap-center flex-shrink-0 w-80 hover:cursor-pointer rounded-xl shadow-lg p-4 bg-[#19212c] border border-gray-800 hover:border-blue-500 transition-all duration-300 transform hover:-translate-y-1"
-                >
-                    <img
-                        src="{{ url_for('static', filename='assets/header.png') }}"
-                        alt="Card image"
-                        class="w-full h-32 object-cover mb-4 rounded-lg shadow-md"
-                    />
-                    <h2 class="text-xl font-bold mb-2 text-white">
-                        Machine Learning Group
-                    </h2>
-                    <p class="text-gray-300 text-sm leading-relaxed">
-                        Revamping learning with discovering new models and
-                        training
-                    </p>
-                    <div class="flex flex-wrap gap-2 mt-4">
-                        <span
-                            class="px-2 py-1 bg-gradient-to-r from-blue-500 to-purple-500 text-white text-xs rounded-full font-medium hover:border bg-pink-300"
-                            >ai</span
-                        >
-                        <span
-                            class="px-2 py-1 bg-gradient-to-r from-blue-500 to-purple-500 text-white text-xs rounded-full font-medium hover:border bg-pink-300"
-                            >machine learning</span
-                        >
+                <a href="{{ url_for('group_info') }}">
+                    <div
+                        class="snap-center flex-shrink-0 w-80 hover:cursor-pointer rounded-xl shadow-lg p-4 bg-[#19212c] border border-gray-800 hover:border-blue-500 transition-all duration-300 transform hover:-translate-y-1"
+                    >
+                        <img
+                            src="{{ url_for('static', filename='assets/header.png') }}"
+                            alt="Card image"
+                            class="w-full h-32 object-cover mb-4 rounded-lg shadow-md"
+                        />
+                        <h2 class="text-xl font-bold mb-2 text-white">
+                            Machine Learning Group
+                        </h2>
+                        <p class="text-gray-300 text-sm leading-relaxed">
+                            Revamping learning with discovering new models and
+                            training
+                        </p>
+                        <div class="flex flex-wrap gap-2 mt-4">
+                            <span
+                                class="px-2 py-1 bg-gradient-to-r from-blue-500 to-purple-500 text-white text-xs rounded-full font-medium hover:border bg-pink-300"
+                                >ai</span
+                            >
+                            <span
+                                class="px-2 py-1 bg-gradient-to-r from-blue-500 to-purple-500 text-white text-xs rounded-full font-medium hover:border bg-pink-300"
+                                >machine learning</span
+                            >
+                        </div>
                     </div>
-                </div>
+                </a>
                 <div
                     class="snap-center flex-shrink-0 w-80 rounded-xl shadow-lg p-4 bg-[#19212c] border border-gray-800 hover:border-blue-500 transition-all duration-300 transform hover:-translate-y-1"
                 >
