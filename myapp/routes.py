@@ -1,4 +1,5 @@
 import secrets
+import pytz
 from datetime import datetime
 from flask import (
     flash,
@@ -7,11 +8,12 @@ from flask import (
     request,
     url_for,
     session,
+    abort,
 )
 from flask_login import current_user, login_required, logout_user, login_user
 from flask_login.login_manager import timedelta
 from flask_mail import Message
-from threading import Timer
+from myapp import resize_group_image
 
 from myapp import (
     app,
@@ -30,19 +32,65 @@ from myapp.form import (
     CreateGroupForm,
     EditGroupForm,
 )
-from myapp.models import User
+from myapp.models import User, Group
+
+
+def convert_to_local(utc_dt):
+    """Convert UTC time to user's local timezone"""
+    user_tz = request.cookies.get("user_timezone", "UTC")
+    local_timezone = pytz.timezone(user_tz)
+    return utc_dt.replace(tzinfo=pytz.utc).astimezone(local_timezone)
 
 
 @app.route("/")
 def home():
+    groups = Group.query.order_by(Group.created_at.desc()).all()
     return render_template(
-        "index.html", current_user=current_user, current_page="home"
+        "index.html",
+        current_user=current_user,
+        current_page="home",
+        groups=groups,
     )
 
 
-@app.route("/groups/create/")
+@app.route("/award_points")
+def award_points():
+    pass
+
+
+@app.route("/groups/create/", methods=("GET", "POST"))
 def create_group():
     form = CreateGroupForm()
+    if form.validate_on_submit():
+        print("hey")
+        if form.group_image.data:
+            group_picture_file = resize_group_image.save_picture(form.group_image.data)
+            group_title = form.group_title.data
+            group_description = form.group_description.data
+            group_tags = form.group_tags.data
+            group = Group(
+                group_title=group_title,
+                group_description=group_description,
+                group_picture_file=group_picture_file,
+                group_tags=group_tags,
+            )
+            db.session.add(group)
+            db.session.commit()
+            flash("Group has successfully been created")
+            redirect(url_for("home"))
+        else:
+            group_title = form.group_title.data
+            group_description = form.group_description.data
+            group_tags = form.group_tags.data
+            group = Group(
+                group_title=group_title,
+                group_description=group_description,
+                group_tags=group_tags,
+            )
+            db.session.add(group)
+            db.session.commit()
+            flash("Group has successfully been created")
+            redirect(url_for("home"))
     return render_template("groups/create_group.html", form=form)
 
 
@@ -54,12 +102,20 @@ def edit_group():
 
 @app.route("/group/chat")
 def chat_group():
-    return render_template("groups/group_chat.html")
+    return render_template("groups/group_chat.html", current_user=current_user)
 
 
-@app.route("/group/info")
-def group_info():
-    return render_template("groups/group_info.html")
+@app.route("/group/<id>/info")
+def group_info(id):
+    group = Group.query.filter_by(id=id).first()
+    if not group:
+        abort(404)
+    print(group)
+    return render_template(
+        "groups/group_info.html",
+        group=group,
+        created_time=convert_to_local(group.created_at),
+    )
 
 
 def send_token_email(tk):
@@ -139,9 +195,7 @@ def login():
     form = LoginForm()
     if form.validate_on_submit():
         user = User.query.filter_by(email=form.email.data).first()
-        if user and bcrypt.check_password_hash(
-            user.password, form.password.data
-        ):
+        if user and bcrypt.check_password_hash(user.password, form.password.data):
             flash(
                 "A Verification Code has been sent to your email. Please input the code to proceed",
                 "success",
@@ -175,9 +229,7 @@ def register():
             email = form.email.data.lower()
             password = form.password.data
 
-            hashed_password = bcrypt.generate_password_hash(password).decode(
-                "utf-8"
-            )
+            hashed_password = bcrypt.generate_password_hash(password).decode("utf-8")
             user = User(
                 username=username,
                 email=email,
@@ -194,9 +246,7 @@ def register():
             )
             return redirect(url_for("login"))
 
-    return render_template(
-        "register_user.html", form=form, current_page="register"
-    )
+    return render_template("register_user.html", form=form, current_page="register")
 
 
 def send_reset_email(user):
@@ -281,10 +331,7 @@ def profile():
             flash("Your Account Info has been updated successfully!", "success")
             return redirect(url_for("profile"))
 
-    if (
-        password_form.password_submit.data
-        and password_form.validate_on_submit()
-    ):
+    if password_form.password_submit.data and password_form.validate_on_submit():
         hashed_password = bcrypt.generate_password_hash(
             password_form.new_password.data
         ).decode("utf-8")
