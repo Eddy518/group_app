@@ -171,31 +171,40 @@
     });
 
     // Handle incoming messages
-    socket.on('message', (data) => {
-        const isCurrentUser = data.user === '{{ current_user.username }}';
-        const messageHtml = `
-            <div class="flex items-start space-x-3 ${isCurrentUser ? 'justify-end' : ''}">
-                ${!isCurrentUser ? `
-                    <img src="https://ui-avatars.com/api/?name=${data.user}" class="w-8 h-8 rounded-full">
-                ` : ''}
-                <div class="${isCurrentUser ? 'flex flex-col items-end' : ''}">
-                    <div class="flex items-center space-x-2">
-                        ${!isCurrentUser ? `
-                            <span class="text-gray-300 font-medium">${data.user}</span>
-                        ` : ''}
-                        <span class="text-gray-500 text-xs">${new Date(data.timestamp).toLocaleTimeString()}</span>
-                    </div>
-                    <div class="mt-1 ${isCurrentUser ? 'bg-blue-600 text-white' : 'bg-[#19212c] text-gray-300'} p-3 rounded-lg max-w-md">
-                        ${data.msg}
-                    </div>
-                </div>
-                ${isCurrentUser ? `
-                    <img src="https://ui-avatars.com/api/?name=${data.user}" class="w-8 h-8 rounded-full">
-                ` : ''}
-            </div>
-        `;
-        messagesDiv.insertAdjacentHTML('beforeend', messageHtml);
-        messagesDiv.scrollTop = messagesDiv.scrollHeight;
+socket.on('message', (data) => {
+    const isCurrentUser = data.user === '{{ current_user.username }}';
+
+    // Generate current local time
+    const now = new Date();
+    const timestamp = now.toLocaleTimeString([], {
+        hour: 'numeric',
+        minute: '2-digit',
+        hour12: true
     });
+
+    const messageHtml = `
+        <div class="flex items-start space-x-3 ${isCurrentUser ? 'justify-end' : ''}">
+            ${!isCurrentUser ? `
+                <img src="https://ui-avatars.com/api/?name=${data.user}" class="w-8 h-8 rounded-full">
+            ` : ''}
+            <div class="${isCurrentUser ? 'flex flex-col items-end' : ''}">
+                <div class="flex items-center space-x-2">
+                    ${!isCurrentUser ? `
+                        <span class="text-gray-300 font-medium">${data.user}</span>
+                    ` : ''}
+                    <span class="text-gray-500 text-xs">${timestamp}</span>
+                </div>
+                <div class="mt-1 ${isCurrentUser ? 'bg-blue-600 text-white' : 'bg-[#19212c] text-gray-300'} p-3 rounded-lg max-w-md">
+                    ${data.msg}
+                </div>
+            </div>
+            ${isCurrentUser ? `
+                <img src="https://ui-avatars.com/api/?name=${data.user}" class="w-8 h-8 rounded-full">
+            ` : ''}
+        </div>
+    `;
+    messagesDiv.insertAdjacentHTML('beforeend', messageHtml);
+    messagesDiv.scrollTop = messagesDiv.scrollHeight;
+});
 </script>
 {% endblock %}

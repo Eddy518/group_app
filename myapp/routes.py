@@ -31,16 +31,9 @@ from myapp.form import (
 from myapp.models import User, Group, GroupMessage
 
 from flask_socketio import emit, join_room, leave_room
-from myapp.utils import handle_points
+from myapp.utils import handle_points, convert_to_local
 
 online_users = {}
-
-
-def convert_to_local(utc_dt):
-    """Convert UTC time to user's local timezone"""
-    user_tz = request.cookies.get("user_timezone", "UTC")
-    local_timezone = pytz.timezone(user_tz)
-    return utc_dt.replace(tzinfo=pytz.utc).astimezone(local_timezone)
 
 
 @app.route("/")
@@ -55,13 +48,16 @@ def home():
 
 
 @app.template_filter("formatdatetime")
-def format_datetime(timestamp_str):
-    """Convert ISO format timestamp string to formatted time"""
-    try:
-        dt = datetime.fromisoformat(timestamp_str)
-        return dt.strftime("%I:%M %p")
-    except:
-        return timestamp_str
+def format_datetime(timestamp):
+    """Convert UTC timestamp to local time and format it"""
+    if isinstance(timestamp, str):
+        try:
+            timestamp = datetime.fromisoformat(timestamp)
+        except:
+            return timestamp
+
+    local_time = convert_to_local(timestamp)
+    return local_time.strftime("%I:%M %p")
 
 
 @app.route("/group/<int:group_id>/chat")

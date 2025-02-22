@@ -1,10 +1,11 @@
-# myapp/utils.py
 import re
+import pytz
 from myapp import db
 from cryptography.fernet import Fernet
 import os
 from base64 import b64encode, b64decode
 from dotenv import load_dotenv
+from flask import request
 
 load_dotenv()
 
@@ -59,3 +60,10 @@ class MessageEncryption:
         except Exception as e:
             print(f"Decryption error: {e}")
             return "**Message could not be decrypted**"
+
+
+def convert_to_local(utc_dt):
+    """Convert UTC time to user's local timezone"""
+    user_tz = request.cookies.get("user_timezone", "UTC")
+    local_timezone = pytz.timezone(user_tz)
+    return utc_dt.replace(tzinfo=pytz.utc).astimezone(local_timezone)

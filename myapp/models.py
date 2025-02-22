@@ -3,7 +3,7 @@ from itsdangerous.url_safe import URLSafeTimedSerializer as Serializer
 from datetime import datetime
 
 from myapp import app, db, login_manager
-from myapp.utils import MessageEncryption
+from myapp.utils import MessageEncryption, convert_to_local
 
 
 @login_manager.user_loader
@@ -81,10 +81,11 @@ class GroupMessage(db.Model):
         return self._encryptor.decrypt(self.content)
 
     def to_dict(self):
+        local_time = convert_to_local(self.timestamp)
         return {
             "id": self.id,
             "content": self.decrypted_content(),
-            "timestamp": self.timestamp.strftime("%I:%M %p"),
+            "timestamp": local_time.strftime("%I:%M %p"),
             "user": {
                 "id": self.user.id,
                 "username": self.user.username,
