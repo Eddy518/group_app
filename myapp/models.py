@@ -53,3 +53,25 @@ class Group(db.Model):
 
     def __repr__(self) -> str:
         return f"Group ('{self.group_title}', '{self.group_description}','{self.group_picture_file}','{self.group_tags}','{self.created_at}')"
+
+
+class GroupMessage(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    content = db.Column(db.Text, nullable=False)
+    timestamp = db.Column(db.DateTime, default=datetime.utcnow)
+    user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
+    group_id = db.Column(db.Integer, db.ForeignKey("group.id"), nullable=False)
+
+    user = db.relationship("User", backref="messages")
+    group = db.relationship("Group", backref="messages")
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "content": self.content,
+            "timestamp": self.timestamp.isoformat(),
+            "user": {
+                "id": self.user.id,
+                "username": self.user.username,
+            },
+        }

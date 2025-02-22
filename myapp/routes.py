@@ -3,6 +3,7 @@ import pytz
 from datetime import datetime
 from flask import (
     flash,
+    jsonify,
     redirect,
     render_template,
     request,
@@ -15,12 +16,7 @@ from flask_login.login_manager import timedelta
 from flask_mail import Message
 from myapp import resize_group_image
 
-from myapp import (
-    app,
-    bcrypt,
-    db,
-    mail,
-)
+from myapp import app, bcrypt, db, mail, socketio
 from myapp.form import (
     LoginForm,
     PasswordResetForm,
@@ -32,7 +28,13 @@ from myapp.form import (
     CreateGroupForm,
     EditGroupForm,
 )
-from myapp.models import User, Group
+from myapp.models import User, Group, GroupMessage
+
+from flask_socketio import emit, join_room, leave_room
+from myapp.utils import handle_points
+
+
+online_users = {}
 
 
 def convert_to_local(utc_dt):
@@ -53,9 +55,135 @@ def home():
     )
 
 
+@app.route("/group/<int:group_id>/chat")
+@login_required
+def chat_group(group_id):
+    group = Group.query.get_or_404(group_id)
+    messages = (
+        GroupMessage.query.filter_by(group_id=group_id)
+        .order_by(GroupMessage.timestamp.desc())
+        .limit(50)
+        .all()
+    )
+    messages.reverse()
+
+    return render_template(
+        "groups/group_chat.html",
+        group=group,
+        messages=messages,
+        current_user=current_user,
+    )
+
+
+@socketio.on("join")
+def on_join(data):
+    group_id = data["group_id"]
+    room = f"group_{group_id}"
+    join_room(room)
+
+    # Track online users
+    if group_id not in online_users:
+        online_users[group_id] = set()
+    online_users[group_id].add(current_user.id)
+
+    emit(
+        "status",
+        {
+            "msg": f"{current_user.username} has joined the chat",
+            "type": "join",
+            "online_count": len(online_users[group_id]),
+        },
+        room=room,
+    )
+
+
+@socketio.on("leave")
+def on_leave(data):
+    group_id = data["group_id"]
+    room = f"group_{group_id}"
+    leave_room(room)
+
+    if group_id in online_users:
+        online_users[group_id].discard(current_user.id)
+    emit(
+        "status",
+        {
+            "msg": f"{current_user.username} has left the chat",
+            "type": "leave",
+            "online_count": len(
+                online_users[group_id] if group_id in online_users else 0
+            ),
+        },
+        room=room,
+    )
+
+
+@socketio.on("disconnect")
+def on_disconnect():
+    # Clean up when user disconnects
+    for group_id in list(online_users.keys()):
+        if current_user.id in online_users[group_id]:
+            online_users[group_id].discard(current_user.id)
+            room = f"group_{group_id}"
+            emit(
+                "status",
+                {
+                    "msg": f"{current_user.username} has disconnected",
+                    "type": "leave",
+                    "online_count": len(online_users[group_id]),
+                },
+                room=room,
+            )
+
+
+@socketio.on("message")
+def handle_message(data):
+    content = data.get("message")  # Change from data['message'] to data.get('message')
+    group_id = data.get("group_id")
+    room = f"group_{group_id}"
+
+    if not content:
+        return
+
+    # Handle points if message contains @username++
+    recipients = handle_points(content, current_user.id)
+
+    # Save message to database
+    message = GroupMessage(content=content, user_id=current_user.id, group_id=group_id)
+    db.session.add(message)
+
+    try:
+        db.session.commit()
+        # Make sure we're sending the actual message content
+        emit(
+            "message",
+            {
+                "msg": content,  # This should be the actual message content
+                "user": current_user.username,
+                "timestamp": message.timestamp.isoformat(),
+                "points_awarded": recipients,
+                "user_id": current_user.id,
+            },
+            room=room,
+        )
+    except:
+        db.session.rollback()
+        emit("error", {"msg": "Failed to send message"}, room=room)
+
+
 @app.route("/award_points")
 def award_points():
     pass
+
+
+@app.route("/api/process-message", methods=["POST"])
+@login_required
+def process_message():
+    data = request.get_json()
+    message = data.get("message")
+
+    if not message:
+        return jsonify({"error": "No message provided"}), 400
 
 
 @app.route("/groups/create/", methods=("GET", "POST"))
@@ -98,11 +226,6 @@ def create_group():
 def edit_group():
     form = EditGroupForm()
     return render_template("groups/edit_group.html", form=form)
-
-
-@app.route("/group/chat")
-def chat_group():
-    return render_template("groups/group_chat.html", current_user=current_user)
 
 
 @app.route("/group/<id>/info")
