@@ -3,6 +3,7 @@ from itsdangerous.url_safe import URLSafeTimedSerializer as Serializer
 from datetime import datetime
 
 from myapp import app, db, login_manager
+from myapp.utils import MessageEncryption
 
 
 @login_manager.user_loader
@@ -65,11 +66,25 @@ class GroupMessage(db.Model):
     user = db.relationship("User", backref="messages")
     group = db.relationship("Group", backref="messages")
 
+    # Private encryptor field to encrypt socketio messages
+    _encryptor = MessageEncryption()
+
+    def __init__(self, *args, **kwargs):
+        if "content" in kwargs:
+            # Encrypt content before saving
+            self.original_content = kwargs["content"]
+            kwargs["content"] = self._encryptor.encrypt(kwargs["content"])
+        super().__init__(*args, **kwargs)
+
+    def decrypted_content(self):
+        """Get decrypted message content"""
+        return self._encryptor.decrypt(self.content)
+
     def to_dict(self):
         return {
             "id": self.id,
-            "content": self.content,
-            "timestamp": self.timestamp.isoformat(),
+            "content": self.decrypted_content(),
+            "timestamp": self.timestamp.strftime("%I:%M %p"),
             "user": {
                 "id": self.user.id,
                 "username": self.user.username,

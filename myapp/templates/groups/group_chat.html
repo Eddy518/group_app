@@ -28,14 +28,20 @@
     <!-- Left sidebar - Members list -->
     <div class="w-64 bg-[#19212c] border-r border-gray-700 hidden md:flex md:flex-col">
         <div class="p-4 border-b border-gray-700 flex-shrink-0">
-            <h2 class="text-lg font-semibold text-white">{{ group.group_title }}</h2>
+            <h2 class="text-lg font-semibold text-white">{{ group.group_title }} members</h2>
         </div>
         <!-- Online members list -->
         <div class="overflow-y-auto flex-1 custom-scrollbar">
             <div class="p-3">
-                <div id="online-users" class="space-y-3">
+                <div id="online-user" class="space-y-3">
                     <!-- Online users will be populated via JavaScript -->
+                    Homelander
                 </div>
+                <!-- <h1 class="border-b" > Current members</h1> -->
+                <!-- <div id="online-user" class="space-y-3"> -->
+                <!--     <\!-- Online users will be populated via JavaScript -\-> -->
+                <!--     Homelander -->
+                <!-- </div> -->
             </div>
         </div>
     </div>
@@ -64,7 +70,7 @@
                         {% if message.user.id != current_user.id %}
                         <span class="text-gray-300 font-medium">{{ message.user.username }}</span>
                         {% endif %}
-                        <span class="text-gray-500 text-xs">{{ message.timestamp.strftime('%I:%M %p') }}</span>
+                        <span class="text-gray-500 text-xs">{{ message.timestamp | formatdatetime }}</span>
                     </div>
                     <div class="mt-1 {% if message.user.id == current_user.id %}bg-blue-600 text-white{% else %}bg-[#19212c] text-gray-300{% endif %} p-3 rounded-lg max-w-md">
                         {{ message.content }}
@@ -78,7 +84,7 @@
         </div>
 
         <!-- Message input area -->
-        <form id="message-form" class="bg-[#19212c] border-t border-gray-700 p-4 flex-shrink-0">
+        <form id="message-form" class="bg-[#19212c] border-t border-gray-700 p-4 flex-shrink-0" autocomplete="off">
             <div class="flex items-center space-x-3">
                 <div class="flex-1">
                     <input type="text"
@@ -101,8 +107,12 @@
     const messagesDiv = document.getElementById('messages');
     const messageForm = document.getElementById('message-form');
     const messageInput = document.getElementById('message-input');
+    const onlineCountSpan = document.getElementById('online-count');
+    const onlineUsersDiv = document.getElementById('online-users');
     const groupId = {{ group.id }};
-    const currentUserId = {{ current_user.id }};
+    
+    // Set to keep track of online users
+    const onlineUsers = new Set();
 
     // Join room on connect
     socket.on('connect', () => {
@@ -115,26 +125,54 @@
         if (data.hasOwnProperty('online_count')) {
             onlineCountSpan.textContent = `${data.online_count} online`;
         }
+
+        // Update online users list
+        if (data.type === 'join') {
+            onlineUsers.add(data.username);
+        } else if (data.type === 'leave' || data.type === 'disconnect') {
+            onlineUsers.delete(data.username);
+        }
+        updateOnlineUsersList();
         
         // Show status message
         const statusHtml = `
-            <div class="flex justify-center">
-                <span class="text-gray-500 text-sm">${data.msg}</span>
+            <div class="flex justify-center my-2">
+                <span class="text-sm bg-[#19212c] px-3 py-1 rounded-full">${data.msg}</span>
             </div>
         `;
         messagesDiv.insertAdjacentHTML('beforeend', statusHtml);
         messagesDiv.scrollTop = messagesDiv.scrollHeight;
     });
 
-    // Clean up on page unload
-    window.addEventListener('beforeunload', () => {
-        socket.emit('leave', {group_id: groupId});
-    });
+    // Update online users list in sidebar
+    function updateOnlineUsersList() {
+        onlineUsersDiv.innerHTML = Array.from(onlineUsers).map(username => `
+            <div class="flex items-center space-x-3 p-2 hover:bg-gray-700 rounded-lg">
+                <div class="relative">
+                    <img src="https://ui-avatars.com/api/?name=${username}" class="w-8 h-8 rounded-full"/>
+                    <span class="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-[#19212c] rounded-full"></span>
+                </div>
+                <span class="text-gray-300">${username}</span>
+            </div>
+        `).join('');
+    }
 
+    // Handle message submission
+    messageForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const message = messageInput.value.trim();
+        if (message) {
+            socket.emit('message', {
+                message: message,
+                group_id: groupId
+            });
+            messageInput.value = '';
+        }
+    });
 
     // Handle incoming messages
     socket.on('message', (data) => {
-        const isCurrentUser = data.user_id === currentUserId;
+        const isCurrentUser = data.user === '{{ current_user.username }}';
         const messageHtml = `
             <div class="flex items-start space-x-3 ${isCurrentUser ? 'justify-end' : ''}">
                 ${!isCurrentUser ? `
@@ -158,49 +196,6 @@
         `;
         messagesDiv.insertAdjacentHTML('beforeend', messageHtml);
         messagesDiv.scrollTop = messagesDiv.scrollHeight;
-
-        // Show point award notifications
-        if (data.points_awarded && data.points_awarded.length > 0) {
-            data.points_awarded.forEach(recipient => {
-                showNotification(`${data.user} awarded 1 point to ${recipient.username}!`);
-            });
-        }
     });
-
-    // Handle status messages
-    socket.on('status', (data) => {
-        const statusHtml = `
-            <div class="flex justify-center">
-                <span class="text-gray-500 text-sm">${data.msg}</span>
-            </div>
-        `;
-        messagesDiv.insertAdjacentHTML('beforeend', statusHtml);
-        messagesDiv.scrollTop = messagesDiv.scrollHeight;
-    });
-
-    // Handle form submission
-    messageForm.addEventListener('submit', (e) => {
-        e.preventDefault();
-        const message = messageInput.value.trim();
-        if (message) {
-            socket.emit('message', {
-                message: message,
-                group_id: groupId
-            });
-            messageInput.value = '';
-        }
-    });
-
-    // Show notifications
-    function showNotification(message) {
-        const toast = document.createElement('div');
-        toast.className = 'fixed bottom-20 right-4 bg-green-500 text-white px-4 py-2 rounded-lg shadow-lg';
-        toast.textContent = message;
-        document.body.appendChild(toast);
-        setTimeout(() => toast.remove(), 3000);
-    }
-
-    // Auto-scroll to bottom on load
-    messagesDiv.scrollTop = messagesDiv.scrollHeight;
 </script>
 {% endblock %}

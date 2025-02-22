@@ -33,7 +33,6 @@ from myapp.models import User, Group, GroupMessage
 from flask_socketio import emit, join_room, leave_room
 from myapp.utils import handle_points
 
-
 online_users = {}
 
 
@@ -55,6 +54,16 @@ def home():
     )
 
 
+@app.template_filter("formatdatetime")
+def format_datetime(timestamp_str):
+    """Convert ISO format timestamp string to formatted time"""
+    try:
+        dt = datetime.fromisoformat(timestamp_str)
+        return dt.strftime("%I:%M %p")
+    except:
+        return timestamp_str
+
+
 @app.route("/group/<int:group_id>/chat")
 @login_required
 def chat_group(group_id):
@@ -67,11 +76,17 @@ def chat_group(group_id):
     )
     messages.reverse()
 
+    message_dicts = [msg.to_dict() for msg in messages]
+
+    if group_id not in online_users:
+        online_users[group_id] = set()
+
     return render_template(
         "groups/group_chat.html",
         group=group,
-        messages=messages,
+        messages=message_dicts,
         current_user=current_user,
+        online_count=len(online_users.get(group_id, set())),
     )
 
 
@@ -84,7 +99,7 @@ def on_join(data):
     # Track online users
     if group_id not in online_users:
         online_users[group_id] = set()
-    online_users[group_id].add(current_user.id)
+    online_users[group_id].add(current_user.username)
 
     emit(
         "status",
@@ -110,8 +125,8 @@ def on_leave(data):
         {
             "msg": f"{current_user.username} has left the chat",
             "type": "leave",
-            "online_count": len(
-                online_users[group_id] if group_id in online_users else 0
+            "online_count": (
+                len(online_users[group_id]) if group_id in online_users else 0
             ),
         },
         room=room,
@@ -122,8 +137,8 @@ def on_leave(data):
 def on_disconnect():
     # Clean up when user disconnects
     for group_id in list(online_users.keys()):
-        if current_user.id in online_users[group_id]:
-            online_users[group_id].discard(current_user.id)
+        if current_user.username in online_users[group_id]:
+            online_users[group_id].discard(current_user.username)
             room = f"group_{group_id}"
             emit(
                 "status",
@@ -138,31 +153,25 @@ def on_disconnect():
 
 @socketio.on("message")
 def handle_message(data):
-    content = data.get("message")  # Change from data['message'] to data.get('message')
-    group_id = data.get("group_id")
+    content = data["message"]
+    group_id = data["group_id"]
     room = f"group_{group_id}"
 
-    if not content:
-        return
-
-    # Handle points if message contains @username++
-    recipients = handle_points(content, current_user.id)
-
-    # Save message to database
     message = GroupMessage(content=content, user_id=current_user.id, group_id=group_id)
     db.session.add(message)
 
+    recipients = handle_points(content, current_user.id, User)
+
     try:
         db.session.commit()
-        # Make sure we're sending the actual message content
         emit(
             "message",
             {
-                "msg": content,  # This should be the actual message content
+                "id": message.id,
+                "msg": content,  # Send the original content, not the method reference
                 "user": current_user.username,
                 "timestamp": message.timestamp.isoformat(),
                 "points_awarded": recipients,
-                "user_id": current_user.id,
             },
             room=room,
         )
