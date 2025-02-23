@@ -129,7 +129,7 @@
 
             <!-- Message input area -->
             <form id="message-form" class="bg-[#19212c] border-t border-gray-700 p-4 flex-shrink-0" autocomplete="off">
-                <div class="flex items-center space-x-3">
+                <div class="flex items-center space-x-3 mb-4">
                     <div class="flex-1">
                         <input type="text"
                                id="message-input"
@@ -161,14 +161,34 @@
 
     // Join room on connect
     socket.on('connect', () => {
-        socket.emit('join', {group_id: groupId});
+        console.log('Connected to socket') // for testing purposes
+        socket.emit('join', {group_id: groupId, username:'{{ current_user.username  }}'});
     });
+
+    function addStatusMessage(msg) {
+    const statusHtml = `
+        <div class="flex justify-center my-2 pointer-events-none">
+            <span class="text-sm text-gray-400 select-none">${msg}</span>
+        </div>
+    `;
+    messagesDiv.insertAdjacentHTML('beforeend', statusHtml);
+    messagesDiv.scrollTop = messagesDiv.scrollHeight;
+    }
+
+    function updateOnlineCount(count) {
+        const onlineCountEl = document.getElementById('online-users');
+        if (onlineCountEl) {
+            onlineCountEl.textContent = `${count} online`;
+        }
+    }
+
 
     // Handle status messages and online count
     socket.on('status', (data) => {
+        console.log('Status event reveived:', data)
         // Update online count
         if (data.hasOwnProperty('online_count')) {
-            onlineCountSpan.textContent = `${data.online_count} online`;
+                updateOnlineCount(data.online_count)
         }
 
         // Update online users list
@@ -178,15 +198,17 @@
             onlineUsers.delete(data.username);
         }
         updateOnlineUsersList();
+
+        addStatusMessage(data.msg)
         
-        // Show status message
-        const statusHtml = `
-            <div class="flex justify-center my-2">
-                <span class="text-sm bg-[#19212c] px-3 py-1 rounded-full">${data.msg}</span>
-            </div>
-        `;
-        messagesDiv.insertAdjacentHTML('beforeend', statusHtml);
-        messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        // // Show status message
+        // const statusHtml = `
+        //     <div class="flex justify-center my-2">
+        //         <span class="text-sm bg-[#19212c] px-3 py-1 rounded-full">${data.msg}</span>
+        //     </div>
+        // `;
+        // messagesDiv.insertAdjacentHTML('beforeend', statusHtml);
+        // messagesDiv.scrollTop = messagesDiv.scrollHeight;
     });
 
     // Update online users list in sidebar

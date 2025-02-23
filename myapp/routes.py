@@ -132,6 +132,7 @@ def on_join(data):
             "online_count": len(online_users[group_id]),
         },
         room=room,
+        broadcast=True,
     )
 
 
@@ -154,6 +155,7 @@ def on_leave(data):
             ),
         },
         room=room,
+        broadcast=True,
     )
 
 
@@ -173,6 +175,7 @@ def on_disconnect():
                     "online_count": len(online_users[group_id]),
                 },
                 room=room,
+                broadcast=True,
             )
 
 
