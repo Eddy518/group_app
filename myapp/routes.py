@@ -60,6 +60,25 @@ def format_datetime(timestamp):
     return local_time.strftime("%I:%M %p")
 
 
+@app.route("/api/group/<int:group_id>/top-contributors")
+@login_required
+def get_top_contributors(group_id):
+    top_contributors = (
+        User.query.join(GroupMember)
+        .filter(GroupMember.group_id == group_id)
+        .order_by(User.points.desc())
+        .limit(5)
+        .all()
+    )
+
+    return jsonify(
+        [
+            {"username": user.username, "points": user.points}
+            for user in top_contributors
+        ]
+    )
+
+
 @app.route("/group/<int:group_id>/chat")
 @login_required
 def chat_group(group_id):
@@ -203,6 +222,18 @@ def handle_message(data):
             },
             room=room,
         )
+
+        if recipients:
+            for recipient in recipients:
+                emit(
+                    "points_awarded",
+                    {
+                        "recipient": recipient["username"],
+                        "awarder": recipient["awarder"],
+                        "new_points": recipient["new_points"],
+                    },
+                    room=room,
+                )
     except:
         db.session.rollback()
         emit("error", {"msg": "Failed to send message"}, room=room)

@@ -165,6 +165,49 @@
         socket.emit('join', {group_id: groupId, username:'{{ current_user.username  }}'});
     });
 
+    function updateUserPoints(username, newPoints) {
+        const userPointsElement = document.querySelector(`[data-username="${username}"] .user-points`);
+        if (userPointsElement) {
+            userPointsElement.textContent = `${newPoints} pts`;
+        }
+
+        // Also update top contributors if needed
+        updateTopContributors();
+    }
+
+    // Optional: Function to refresh top contributors
+    function updateTopContributors() {
+        // You could either:
+        // 1. Make an AJAX call to get updated top contributors
+        // 2. Or update the sorting client-side if you have all user data
+        fetch(`/api/group/${groupId}/top-contributors`)
+            .then(response => response.json())
+            .then(data => {
+                const topContributorsDiv = document.querySelector('.top-contributors');
+                if (topContributorsDiv) {
+                    // Update the top contributors display
+                    // ...
+                }
+            });
+    }
+
+    socket.on('points_awarded', (data) => {
+        const pointsNotification = `
+            <div class="flex justify-center my-2">
+                <span class="text-sm bg-blue-500/10 text-blue-400 px-3 py-1 rounded-full">
+                    🎉 ${data.awarder} awarded a point to ${data.recipient} 
+                    (Total: ${data.new_points} points)
+                </span>
+            </div>
+        `;
+        messagesDiv.insertAdjacentHTML('beforeend', pointsNotification);
+        messagesDiv.scrollTop = messagesDiv.scrollHeight;
+
+        // If you have a points display in the sidebar, update it
+        updateUserPoints(data.recipient, data.new_points);
+    });
+
+
     function addStatusMessage(msg) {
     const statusHtml = `
         <div class="flex justify-center my-2 pointer-events-none">

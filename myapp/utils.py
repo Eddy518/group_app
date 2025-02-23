@@ -23,7 +23,11 @@ def handle_points(message, sender_id, User):
         if recipient and recipient.id != sender_id:
             recipient.points += 1
             recipients.append(
-                {"username": recipient.username, "new_points": recipient.points}
+                {
+                    "username": recipient.username,
+                    "new_points": recipient.points,
+                    "awarder": User.query.get(sender_id).username,
+                }
             )
 
             try:
