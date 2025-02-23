@@ -142,6 +142,17 @@ def on_join(data):
         online_users[group_id] = set()
     online_users[group_id].add(current_user.username)
 
+    group = Group.query.get_or_404(group_id)
+    members = group.get_members()
+
+    top_contributors = (
+        User.query.join(GroupMember)
+        .filter(GroupMember.group_id == group_id)
+        .order_by(User.points.desc())
+        .limit(5)
+        .all()
+    )
+
     emit(
         "status",
         {
@@ -149,6 +160,15 @@ def on_join(data):
             "type": "join",
             "username": current_user.username,
             "online_count": len(online_users[group_id]),
+            "online_users": list(online_users[group_id]),
+            "members": [
+                {"username": member.username, "points": member.points, "id": member.id}
+                for member in members
+            ],
+            "top_contributors": [
+                {"username": user.username, "points": user.points, "id": user.id}
+                for user in top_contributors
+            ],
         },
         room=room,
         broadcast=True,
@@ -172,6 +192,7 @@ def on_leave(data):
             "online_count": (
                 len(online_users[group_id]) if group_id in online_users else 0
             ),
+            "online_users": list(online_users[group_id]),
         },
         room=room,
         broadcast=True,
@@ -237,6 +258,39 @@ def handle_message(data):
     except:
         db.session.rollback()
         emit("error", {"msg": "Failed to send message"}, room=room)
+
+
+@socketio.on("request_updates")
+def handle_update_request(data):
+    group_id = data["group_id"]
+    room = f"group_{group_id}"
+
+    group = Group.query.get_or_404(group_id)
+    members = group.get_members()
+    top_contributors = (
+        User.query.join(GroupMember)
+        .filter(GroupMember.group_id == group_id)
+        .order_by(User.points.desc())
+        .limit(5)
+        .all()
+    )
+
+    emit(
+        "status",
+        {
+            "members": [
+                {"username": m.username, "points": m.points, "id": m.id}
+                for m in members
+            ],
+            "top_contributors": [
+                {"username": u.username, "points": u.points, "id": u.id}
+                for u in top_contributors
+            ],
+            "online_users": list(online_users.get(group_id, set())),
+            "online_count": len(online_users.get(group_id, set())),
+        },
+        room=room,
+    )
 
 
 @app.route("/award_points")

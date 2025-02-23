@@ -29,61 +29,36 @@
         <!-- Left sidebar -->
         <div class="w-64 bg-[#19212c] border-r border-gray-700 hidden md:flex md:flex-col">
             <!-- Group Members Section -->
-        <div class="p-4 border-b border-gray-700">
-            <h2 class="text-lg font-semibold text-white flex items-center justify-between">
-                <span>Members</span>
-                <span class="text-sm text-gray-400">({{ members|length }})</span>
-            </h2>
-            <div class="mt-3 max-h-[30vh] overflow-y-auto custom-scrollbar">
-                <div class="space-y-2">
-                    {% for member in members %}
-                    <div class="flex items-center space-x-3 p-2 hover:bg-gray-700 rounded-lg">
-                        <div class="relative">
-                            <img src="https://ui-avatars.com/api/?name={{ member.username }}"
-                                class="w-8 h-8 rounded-full"/>
-                            <span class="absolute bottom-0 right-0 w-2 h-2
-                                    {% if member.username in online_users %}
-                                    bg-green-500
-                                    {% else %}
-                                    bg-gray-500
-                                    {% endif %}
-                                    border-2 border-[#19212c] rounded-full">
-                            </span>
-                        </div>
-                        <span class="text-gray-300 text-sm">{{ member.username }}</span>
+            <div class="p-4 border-b border-gray-700">
+                <h2 class="text-lg font-semibold text-white flex items-center justify-between">
+                    <span>Members</span>
+                    <span class="text-sm text-gray-400" id="members-count">({{ members|length }})</span>
+                </h2>
+                <div class="mt-3 max-h-[30vh] overflow-y-auto custom-scrollbar">
+                    <div id="members-list" class="space-y-2">
+                        <!-- Members will be dynamically populated -->
                     </div>
-                    {% endfor %}
                 </div>
             </div>
-        </div>
 
             <!-- Online Users Section -->
-        <div class="p-4 border-b border-gray-700">
-            <h2 class="text-lg font-semibold text-white flex items-center space-x-2">
-                <span>Online</span>
-                <span class="text-sm text-gray-400">({{ online_count }})</span>
-            </h2>
-            <div class="mt-3 max-h-[20vh] overflow-y-auto custom-scrollbar">
-                <div id="online-users" class="space-y-2">
-                    <!-- Online users will be populated via JavaScript -->
+            <div class="p-4 border-b border-gray-700">
+                <h2 class="text-lg font-semibold text-white flex items-center space-x-2">
+                    <span>Online</span>
+                    <span class="text-sm text-gray-400" id="online-count">({{ online_count }})</span>
+                </h2>
+                <div class="mt-3 max-h-[20vh] overflow-y-auto custom-scrollbar">
+                    <div id="online-users-list" class="space-y-2">
+                        <!-- Online users will be dynamically populated -->
+                    </div>
                 </div>
             </div>
-        </div>
 
             <!-- Top Contributors Section -->
             <div class="p-4">
                 <h2 class="text-lg font-semibold text-white mb-3">Top Contributors</h2>
-                <div class="space-y-3">
-                    {% for user in top_contributors %}
-                    <div class="flex items-center justify-between p-2 hover:bg-gray-700 rounded-lg">
-                        <div class="flex items-center space-x-3">
-                            <img src="https://ui-avatars.com/api/?name={{ user.username }}"
-                                class="w-8 h-8 rounded-full"/>
-                            <span class="text-gray-300 text-sm">{{ user.username }}</span>
-                        </div>
-                        <span class="text-blue-400 font-medium">{{ user.points }} pts</span>
-                    </div>
-                    {% endfor %}
+                <div id="top-contributors-list" class="space-y-3">
+                    <!-- Top contributors will be dynamically populated -->
                 </div>
             </div>
         </div>
@@ -95,7 +70,6 @@
                 <div class="flex items-center justify-between">
                     <div class="flex items-center space-x-3">
                         <h2 class="text-xl font-semibold text-white">{{ group.group_title }}</h2>
-                        <span id="online-users" class="text-sm text-gray-400">{{ online_count }} online</span>
                     </div>
                 </div>
             </div>
@@ -153,111 +127,41 @@
     const messageForm = document.getElementById('message-form');
     const messageInput = document.getElementById('message-input');
     const onlineCountSpan = document.getElementById('online-count');
-    const onlineUsersDiv = document.getElementById('online-users');
     const groupId = {{ group.id }};
     
     // Set to keep track of online users
-    const onlineUsers = new Set();
+    let onlineUsers = new Set();
 
-    // Join room on connect
-    socket.on('connect', () => {
-        console.log('Connected to socket') // for testing purposes
-        socket.emit('join', {group_id: groupId, username:'{{ current_user.username  }}'});
-    });
+    function updateMembersList(members) {
+        const membersContainer = document.querySelector('#members-list');
+        if (!membersContainer) return;
 
-    function updateUserPoints(username, newPoints) {
-        const userPointsElement = document.querySelector(`[data-username="${username}"] .user-points`);
-        if (userPointsElement) {
-            userPointsElement.textContent = `${newPoints} pts`;
-        }
-
-        // Also update top contributors if needed
-        updateTopContributors();
-    }
-
-    // Optional: Function to refresh top contributors
-    function updateTopContributors() {
-        // You could either:
-        // 1. Make an AJAX call to get updated top contributors
-        // 2. Or update the sorting client-side if you have all user data
-        fetch(`/api/group/${groupId}/top-contributors`)
-            .then(response => response.json())
-            .then(data => {
-                const topContributorsDiv = document.querySelector('.top-contributors');
-                if (topContributorsDiv) {
-                    // Update the top contributors display
-                    // ...
-                }
-            });
-    }
-
-    socket.on('points_awarded', (data) => {
-        const pointsNotification = `
-            <div class="flex justify-center my-2">
-                <span class="text-sm bg-blue-500/10 text-blue-400 px-3 py-1 rounded-full">
-                    🎉 ${data.awarder} awarded a point to ${data.recipient} 
-                    (Total: ${data.new_points} points)
-                </span>
+        membersContainer.innerHTML = members.map(member => `
+            <div class="flex items-center space-x-3 p-2 hover:bg-gray-700 rounded-lg">
+                <div class="relative">
+                    <img src="https://ui-avatars.com/api/?name=${member.username}"
+                         class="w-8 h-8 rounded-full"/>
+                    <span class="absolute bottom-0 right-0 w-2 h-2
+                        ${onlineUsers.has(member.username) ? 'bg-green-500' : 'bg-gray-500'}
+                        border-2 border-[#19212c] rounded-full">
+                    </span>
+                </div>
+                <span class="text-gray-300 text-sm">${member.username}</span>
             </div>
-        `;
-        messagesDiv.insertAdjacentHTML('beforeend', pointsNotification);
-        messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        `).join('');
 
-        // If you have a points display in the sidebar, update it
-        updateUserPoints(data.recipient, data.new_points);
-    });
-
-
-    function addStatusMessage(msg) {
-    const statusHtml = `
-        <div class="flex justify-center my-2 pointer-events-none">
-            <span class="text-sm text-gray-400 select-none">${msg}</span>
-        </div>
-    `;
-    messagesDiv.insertAdjacentHTML('beforeend', statusHtml);
-    messagesDiv.scrollTop = messagesDiv.scrollHeight;
-    }
-
-    function updateOnlineCount(count) {
-        const onlineCountEl = document.getElementById('online-users');
-        if (onlineCountEl) {
-            onlineCountEl.textContent = `${count} online`;
+        // Update members count
+        const membersCount = document.getElementById('members-count');
+        if (membersCount) {
+            membersCount.textContent = `(${members.length})`;
         }
     }
 
+    function updateOnlineUsersList(onlineUsersList) {
+        const onlineUsersContainer = document.querySelector('#online-users-list');
+        if (!onlineUsersContainer) return;
 
-    // Handle status messages and online count
-    socket.on('status', (data) => {
-        console.log('Status event reveived:', data)
-        // Update online count
-        if (data.hasOwnProperty('online_count')) {
-                updateOnlineCount(data.online_count)
-        }
-
-        // Update online users list
-        if (data.type === 'join') {
-            onlineUsers.add(data.username);
-        } else if (data.type === 'leave' || data.type === 'disconnect') {
-            onlineUsers.delete(data.username);
-        }
-        updateOnlineUsersList();
-
-        addStatusMessage(data.msg)
-        
-        // // Show status message
-        // const statusHtml = `
-        //     <div class="flex justify-center my-2">
-        //         <span class="text-sm bg-[#19212c] px-3 py-1 rounded-full">${data.msg}</span>
-        //     </div>
-        // `;
-        // messagesDiv.insertAdjacentHTML('beforeend', statusHtml);
-        // messagesDiv.scrollTop = messagesDiv.scrollHeight;
-    });
-
-    // Update online users list in sidebar
-    function updateOnlineUsersList() {
-        const onlineUsersDiv = document.getElementById('online-users');
-        onlineUsersDiv.innerHTML = Array.from(onlineUsers).map(username => `
+        onlineUsersContainer.innerHTML = onlineUsersList.map(username => `
             <div class="flex items-center space-x-3 p-2 hover:bg-gray-700 rounded-lg">
                 <div class="relative">
                     <img src="https://ui-avatars.com/api/?name=${username}"
@@ -268,6 +172,72 @@
             </div>
         `).join('');
     }
+
+    function updateTopContributors(contributors) {
+        const contributorsContainer = document.querySelector('#top-contributors-list');
+        if (!contributorsContainer) return;
+
+        contributorsContainer.innerHTML = contributors.map(user => `
+            <div class="flex items-center justify-between p-2 hover:bg-gray-700 rounded-lg" data-username="${user.username}">
+                <div class="flex items-center space-x-3">
+                    <img src="https://ui-avatars.com/api/?name=${user.username}"
+                         class="w-8 h-8 rounded-full"/>
+                    <span class="text-gray-300 text-sm">${user.username}</span>
+                </div>
+                <span class="text-blue-400 font-medium user-points">${user.points} pts</span>
+            </div>
+        `).join('');
+    }
+
+    function addStatusMessage(msg) {
+        const statusHtml = `
+            <div class="flex justify-center my-2">
+                <span class="text-sm text-gray-400">${msg}</span>
+            </div>
+        `;
+        messagesDiv.insertAdjacentHTML('beforeend', statusHtml);
+        messagesDiv.scrollTop = messagesDiv.scrollHeight;
+    }
+
+    // Join room on connect
+    socket.on('connect', () => {
+        console.log('Connected to socket');
+        socket.emit('join', {
+            group_id: groupId,
+            username: '{{ current_user.username }}'
+        });
+    });
+
+    // Handle status messages and updates
+    socket.on('status', (data) => {
+        console.log('Status event received:', data);
+
+        // Update online count
+        if (data.hasOwnProperty('online_count')) {
+            onlineCountSpan.textContent = `(${data.online_count})`;
+        }
+
+        // Update online users
+        if (data.hasOwnProperty('online_users')) {
+            onlineUsers = new Set(data.online_users);
+            updateOnlineUsersList(data.online_users);
+        }
+
+        // Update members list if provided
+        if (data.hasOwnProperty('members')) {
+            updateMembersList(data.members);
+        }
+
+        // Update top contributors if provided
+        if (data.hasOwnProperty('top_contributors')) {
+            updateTopContributors(data.top_contributors);
+        }
+
+        // Show status message if there is one
+        if (data.msg) {
+            addStatusMessage(data.msg);
+        }
+    });
 
     // Handle message submission
     messageForm.addEventListener('submit', (e) => {
@@ -283,40 +253,60 @@
     });
 
     // Handle incoming messages
-socket.on('message', (data) => {
-    const isCurrentUser = data.user === '{{ current_user.username }}';
+    socket.on('message', (data) => {
+        const isCurrentUser = data.user === '{{ current_user.username }}';
 
-    // Generate current local time
-    const now = new Date();
-    const timestamp = now.toLocaleTimeString([], {
-        hour: 'numeric',
-        minute: '2-digit',
-        hour12: true
+        // Generate current local time
+        const now = new Date();
+        const timestamp = now.toLocaleTimeString([], {
+            hour: 'numeric',
+            minute: '2-digit',
+            hour12: true
+        });
+
+        const messageHtml = `
+            <div class="flex items-start space-x-3 ${isCurrentUser ? 'justify-end' : ''}">
+                ${!isCurrentUser ? `
+                    <img src="https://ui-avatars.com/api/?name=${data.user}" class="w-8 h-8 rounded-full">
+                ` : ''}
+                <div class="${isCurrentUser ? 'flex flex-col items-end' : ''}">
+                    <div class="flex items-center space-x-2">
+                        ${!isCurrentUser ? `
+                            <span class="text-gray-300 font-medium">${data.user}</span>
+                        ` : ''}
+                        <span class="text-gray-500 text-xs">${timestamp}</span>
+                    </div>
+                    <div class="mt-1 ${isCurrentUser ? 'bg-blue-600 text-white' : 'bg-[#19212c] text-gray-300'} p-3 rounded-lg max-w-md">
+                        ${data.msg}
+                    </div>
+                </div>
+                ${isCurrentUser ? `
+                    <img src="https://ui-avatars.com/api/?name=${data.user}" class="w-8 h-8 rounded-full">
+                ` : ''}
+            </div>
+        `;
+        messagesDiv.insertAdjacentHTML('beforeend', messageHtml);
+        messagesDiv.scrollTop = messagesDiv.scrollHeight;
     });
 
-    const messageHtml = `
-        <div class="flex items-start space-x-3 ${isCurrentUser ? 'justify-end' : ''}">
-            ${!isCurrentUser ? `
-                <img src="https://ui-avatars.com/api/?name=${data.user}" class="w-8 h-8 rounded-full">
-            ` : ''}
-            <div class="${isCurrentUser ? 'flex flex-col items-end' : ''}">
-                <div class="flex items-center space-x-2">
-                    ${!isCurrentUser ? `
-                        <span class="text-gray-300 font-medium">${data.user}</span>
-                    ` : ''}
-                    <span class="text-gray-500 text-xs">${timestamp}</span>
-                </div>
-                <div class="mt-1 ${isCurrentUser ? 'bg-blue-600 text-white' : 'bg-[#19212c] text-gray-300'} p-3 rounded-lg max-w-md">
-                    ${data.msg}
-                </div>
+    // Handle points awarded
+    socket.on('points_awarded', (data) => {
+        const pointsNotification = `
+            <div class="flex justify-center my-2">
+                <span class="text-sm bg-blue-500/10 text-blue-400 px-3 py-1 rounded-full">
+                    🎉 ${data.awarder} awarded a point to ${data.recipient}
+                    (Total: ${data.new_points} points)
+                </span>
             </div>
-            ${isCurrentUser ? `
-                <img src="https://ui-avatars.com/api/?name=${data.user}" class="w-8 h-8 rounded-full">
-            ` : ''}
-        </div>
-    `;
-    messagesDiv.insertAdjacentHTML('beforeend', messageHtml);
-    messagesDiv.scrollTop = messagesDiv.scrollHeight;
-});
+        `;
+        messagesDiv.insertAdjacentHTML('beforeend', pointsNotification);
+        messagesDiv.scrollTop = messagesDiv.scrollHeight;
+
+        // Request updates for sidebar
+        socket.emit('request_updates', { group_id: groupId });
+    });
+
+    // Initial load of sidebar data
+    socket.emit('request_updates', { group_id: groupId });
 </script>
 {% endblock %}

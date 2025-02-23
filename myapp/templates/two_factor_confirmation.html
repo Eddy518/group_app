@@ -1,19 +1,19 @@
 {% extends "base.html" %} {% block body %}
 <section>
     <div
-        class="flex flex-col items-center justify-center px-6 py-8 mx-auto md:h-screen lg:py-0"
+        class="flex flex-col items-center justify-center h-screen px-6 py-8 mx-auto md:h-screen lg:py-0"
     >
         <div
-            class="w-full bg-white rounded-lg shadow md:mt-0 sm:max-w-md xl:p-0"
+            class="w-full rounded-lg shadow md:mt-0 sm:max-w-md xl:p-0  bg-[#19212c]"
         >
             <div class="p-6 space-y-4 md:space-y-6 sm:p-8">
                 <h1
-                    class="text-xl font-bold leading-tight tracking-tight text-gray-900 md:text-2xl text-center"
+                    class="text-xl font-bold leading-tight tracking-tight text-white md:text-2xl text-center"
                 >
-                    Email Verification
+                    Account Verification
                 </h1>
                 <div class="flex flex-col items-center space-y-4">
-                    <p class="text-sm text-gray-600 text-center">
+                    <p class="text-sm text-white text-center">
                         Please enter the verification code that was sent to your
                         email address. Code expires in
                         <span id="timer">2:00</span>.
@@ -25,12 +25,11 @@
                             class="bg-gray-50 border border-gray-300
                             text-gray-900 sm:text-sm rounded-lg
                             focus:ring-blue-600 focus:border-blue-600 block
-                            w-full p-2.5", placeholder="Enter verification
-                            code", required=True ) }}
+                            w-full p-2.5", placeholder="Enter verification code", required=True ) }}
                         </div>
                         <button
                             type="submit"
-                            class="w-full text-white bg-blue-600 hover:bg-blue-700 focus:ring-4 focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center"
+                            class="w-full text-white bg-blue-600 space-y-4 hover:bg-blue-700 focus:ring-4 focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center"
                         >
                             Verify Code
                         </button>
@@ -40,7 +39,7 @@
                         >
                             <button
                                 type="button"
-                                class="w-full text-white bg-blue-600 hover:bg-blue-700 focus:ring-4 focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center"
+                                class="w-full text-white mt-3 bg-blue-600 hover:bg-blue-700 focus:ring-4 focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center"
                             >
                                 Resend Code
                             </button>
