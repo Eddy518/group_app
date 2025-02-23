@@ -52,8 +52,39 @@ class Group(db.Model):
     group_tags = db.Column(db.String(30))
     created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
 
+    def add_member(self, user):
+        if not self.is_member(user):
+            membership = GroupMember(user=user, group=self)
+            db.session.add(membership)
+            return membership
+        return None
+
+    def remove_member(self, user):
+        membership = GroupMember.query.filter_by(user=user, group=self).first()
+        if membership:
+            db.session.delete(membership)
+
+    def is_member(self, user):
+        return GroupMember.query.filter_by(user=user, group=self).first() is not None
+
+    def get_members(self):
+        return [membership.user for membership in self.members]
+
     def __repr__(self) -> str:
         return f"Group ('{self.group_title}', '{self.group_description}','{self.group_picture_file}','{self.group_tags}','{self.created_at}')"
+
+
+class GroupMember(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
+    group_id = db.Column(db.Integer, db.ForeignKey("group.id"), nullable=False)
+    joined_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    user = db.relationship("User", backref="memberships")
+    group = db.relationship("Group", backref="members")
+
+    def __repr__(self) -> str:
+        return f"<GroupMember {self.user.username} in {self.group.group_title}>"
 
 
 class GroupMessage(db.Model):

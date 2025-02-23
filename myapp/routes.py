@@ -28,7 +28,7 @@ from myapp.form import (
     CreateGroupForm,
     EditGroupForm,
 )
-from myapp.models import User, Group, GroupMessage
+from myapp.models import User, Group, GroupMessage, GroupMember
 
 from flask_socketio import emit, join_room, leave_room
 from myapp.utils import handle_points, convert_to_local
@@ -64,6 +64,19 @@ def format_datetime(timestamp):
 @login_required
 def chat_group(group_id):
     group = Group.query.get_or_404(group_id)
+
+    if group_id not in online_users:
+        online_users[group_id] = set()
+
+    if not group.is_member(current_user):
+        group.add_member(current_user)
+        try:
+            db.session.commit()
+            flash("You have joined the group", "success")
+        except:
+            db.session.rollback()
+            flash("Error joining the group", "error")
+            return redirect(url_for("home"))
     messages = (
         GroupMessage.query.filter_by(group_id=group_id)
         .order_by(GroupMessage.timestamp.desc())
@@ -74,6 +87,16 @@ def chat_group(group_id):
 
     message_dicts = [msg.to_dict() for msg in messages]
 
+    members = group.get_members()
+
+    top_contributors = (
+        User.query.join(GroupMember)
+        .filter(GroupMember.group_id == group_id)
+        .order_by(User.points.desc())
+        .limit(5)
+        .all()
+    )
+
     if group_id not in online_users:
         online_users[group_id] = set()
 
@@ -82,6 +105,9 @@ def chat_group(group_id):
         group=group,
         messages=message_dicts,
         current_user=current_user,
+        members=members,
+        top_contributors=top_contributors,
+        online_users=online_users[group_id],
         online_count=len(online_users.get(group_id, set())),
     )
 
@@ -102,6 +128,7 @@ def on_join(data):
         {
             "msg": f"{current_user.username} has joined the chat",
             "type": "join",
+            "username": current_user.username,
             "online_count": len(online_users[group_id]),
         },
         room=room,
@@ -121,6 +148,7 @@ def on_leave(data):
         {
             "msg": f"{current_user.username} has left the chat",
             "type": "leave",
+            "username": current_user.username,
             "online_count": (
                 len(online_users[group_id]) if group_id in online_users else 0
             ),
@@ -141,6 +169,7 @@ def on_disconnect():
                 {
                     "msg": f"{current_user.username} has disconnected",
                     "type": "leave",
+                    "username": current_user.username,
                     "online_count": len(online_users[group_id]),
                 },
                 room=room,
