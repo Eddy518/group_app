@@ -24,80 +24,115 @@
         scrollbar-color: rgba(156, 163, 175, 0.3) transparent;
     }
 </style>
-<div class="flex h-[calc(100vh-7rem)] mt-16 fixed w-full">
-    <!-- Left sidebar - Members list -->
-    <div class="w-64 bg-[#19212c] border-r border-gray-700 hidden md:flex md:flex-col">
-        <div class="p-4 border-b border-gray-700 flex-shrink-0">
-            <h2 class="text-lg font-semibold text-white">{{ group.group_title }} members</h2>
-        </div>
-        <!-- Online members list -->
-        <div class="overflow-y-auto flex-1 custom-scrollbar">
-            <div class="p-3">
-                <div id="online-user" class="space-y-3">
-                    <!-- Online users will be populated via JavaScript -->
-                    Homelander
+<div class="flex justify-center w-full">
+    <div class="flex h-[calc(100vh-7rem)] mt-16 fixed max-w-10xl w-full">
+        <!-- Left sidebar -->
+        <div class="w-64 bg-[#19212c] border-r border-gray-700 hidden md:flex md:flex-col">
+            <!-- Group Members Section -->
+            <div class="p-4 border-b border-gray-700">
+                <h2 class="text-lg font-semibold text-white">Members</h2>
+                <div class="mt-3 max-h-[30vh] overflow-y-auto custom-scrollbar">
+                    <div class="space-y-2">
+                        {% for i in range(5) %}
+                        <div class="flex items-center space-x-3 p-2 hover:bg-gray-700 rounded-lg">
+                            <div class="relative">
+                                <img src="https://ui-avatars.com/api/?name=Member+{{i}}"
+                                     class="w-8 h-8 rounded-full"/>
+                                <span class="absolute bottom-0 right-0 w-2 h-2 bg-green-500 border-2 border-[#19212c] rounded-full"></span>
+                            </div>
+                            <span class="text-gray-300 text-sm">Member {{i}}</span>
+                        </div>
+                        {% endfor %}
+                    </div>
                 </div>
-                <!-- <h1 class="border-b" > Current members</h1> -->
-                <!-- <div id="online-user" class="space-y-3"> -->
-                <!--     <\!-- Online users will be populated via JavaScript -\-> -->
-                <!--     Homelander -->
-                <!-- </div> -->
+            </div>
+
+            <!-- Online Users Section -->
+            <div class="p-4 border-b border-gray-700">
+                <h2 class="text-lg font-semibold text-white flex items-center space-x-2">
+                    <span>Online</span>
+                    <span class="text-sm text-gray-400">({{online_count}})</span>
+                </h2>
+                <div class="mt-3 max-h-[20vh] overflow-y-auto custom-scrollbar">
+                    <div id="online-users" class="space-y-2">
+                        <!-- Online users will be populated via JavaScript -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Top Contributors Section -->
+            <div class="p-4">
+                <h2 class="text-lg font-semibold text-white mb-3">Top Contributors</h2>
+                <div class="space-y-3">
+                    {% for i in range(5) %}
+                    <div class="flex items-center justify-between p-2 hover:bg-gray-700 rounded-lg">
+                        <div class="flex items-center space-x-3">
+                            <img src="https://ui-avatars.com/api/?name=Top+{{i}}"
+                                 class="w-8 h-8 rounded-full"/>
+                            <span class="text-gray-300 text-sm">User {{i}}</span>
+                        </div>
+                        <span class="text-blue-400 font-medium">{{100 - i * 10}} pts</span>
+                    </div>
+                    {% endfor %}
+                </div>
             </div>
         </div>
-    </div>
 
-    <!-- Main chat area -->
-    <div class="flex-1 flex flex-col bg-[#0e131f] overflow-hidden">
-        <!-- Chat header -->
-        <div class="bg-[#19212c] border-b border-gray-700 p-4 flex-shrink-0">
-            <div class="flex items-center justify-between">
+        <!-- Main chat area -->
+        <div class="flex-1 flex flex-col bg-[#0e131f] overflow-hidden max-w-9xl">
+            <!-- Chat header -->
+            <div class="bg-[#19212c] border-b border-gray-700 p-4 flex-shrink-0">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center space-x-3">
+                        <h2 class="text-xl font-semibold text-white">{{ group.group_title }}</h2>
+                        <span id="online-users" class="text-sm text-gray-400">{{ online_count }} online</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Messages area -->
+            <div id="messages" class="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar">
+                {% for message in messages %}
+                <div class="flex items-start space-x-3 {% if message.user.id == current_user.id %}justify-end{% endif %}">
+                    {% if message.user.id != current_user.id %}
+                    <img src="https://ui-avatars.com/api/?name={{ message.user.username }}"
+                         class="w-8 h-8 rounded-full">
+                    {% endif %}
+                    <div class="{% if message.user.id == current_user.id %}flex flex-col items-end{% endif %}">
+                        <div class="flex items-center space-x-2">
+                            {% if message.user.id != current_user.id %}
+                            <span class="text-gray-300 font-medium">{{ message.user.username }}</span>
+                            {% endif %}
+                            <span class="text-gray-500 text-xs">{{ message.timestamp | formatdatetime }}</span>
+                        </div>
+                        <div class="mt-1 {% if message.user.id == current_user.id %}bg-blue-600 text-white{% else %}bg-[#19212c] text-gray-300{% endif %} p-3 rounded-lg max-w-md">
+                            {{ message.content }}
+                        </div>
+                    </div>
+                    {% if message.user.id == current_user.id %}
+                    <img src="https://ui-avatars.com/api/?name={{ message.user.username }}"
+                         class="w-8 h-8 rounded-full">
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+
+            <!-- Message input area -->
+            <form id="message-form" class="bg-[#19212c] border-t border-gray-700 p-4 flex-shrink-0" autocomplete="off">
                 <div class="flex items-center space-x-3">
-                    <h2 class="text-xl font-semibold text-white">Group Chat</h2>
-                    <span id="online-users" class="text-sm text-gray-400"></span>
-                </div>
-            </div>
-        </div>
-
-        <!-- Messages area -->
-        <div id="messages" class="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar">
-            {% for message in messages %}
-            <div class="flex items-start space-x-3 {% if message.user.id == current_user.id %}justify-end{% endif %}">
-                {% if message.user.id != current_user.id %}
-                <img src="https://ui-avatars.com/api/?name={{ message.user.username }}" class="w-8 h-8 rounded-full">
-                {% endif %}
-                <div class="{% if message.user.id == current_user.id %}flex flex-col items-end{% endif %}">
-                    <div class="flex items-center space-x-2">
-                        {% if message.user.id != current_user.id %}
-                        <span class="text-gray-300 font-medium">{{ message.user.username }}</span>
-                        {% endif %}
-                        <span class="text-gray-500 text-xs">{{ message.timestamp | formatdatetime }}</span>
+                    <div class="flex-1">
+                        <input type="text"
+                               id="message-input"
+                               class="w-full bg-gray-700 text-gray-200 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                               placeholder="Type your message... Use @username++ to award points">
                     </div>
-                    <div class="mt-1 {% if message.user.id == current_user.id %}bg-blue-600 text-white{% else %}bg-[#19212c] text-gray-300{% endif %} p-3 rounded-lg max-w-md">
-                        {{ message.content }}
-                    </div>
+                    <button type="submit"
+                            class="bg-blue-600 text-white rounded-lg px-4 py-2 hover:bg-blue-700 transition duration-200">
+                        <i class="fas fa-paper-plane"></i>
+                    </button>
                 </div>
-                {% if message.user.id == current_user.id %}
-                <img src="https://ui-avatars.com/api/?name={{ message.user.username }}" class="w-8 h-8 rounded-full">
-                {% endif %}
-            </div>
-            {% endfor %}
+            </form>
         </div>
-
-        <!-- Message input area -->
-        <form id="message-form" class="bg-[#19212c] border-t border-gray-700 p-4 flex-shrink-0" autocomplete="off">
-            <div class="flex items-center space-x-3">
-                <div class="flex-1">
-                    <input type="text"
-                           id="message-input"
-                           class="w-full bg-gray-700 text-gray-200 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                           placeholder="Type your message... Use @username++ to award points">
-                </div>
-                <button type="submit"
-                        class="bg-blue-600 text-white rounded-lg px-4 py-2 hover:bg-blue-700 transition duration-200">
-                    <i class="fas fa-paper-plane"></i>
-                </button>
-            </div>
-        </form>
     </div>
 </div>
 
@@ -146,13 +181,15 @@
 
     // Update online users list in sidebar
     function updateOnlineUsersList() {
+        const onlineUsersDiv = document.getElementById('online-users');
         onlineUsersDiv.innerHTML = Array.from(onlineUsers).map(username => `
             <div class="flex items-center space-x-3 p-2 hover:bg-gray-700 rounded-lg">
                 <div class="relative">
-                    <img src="https://ui-avatars.com/api/?name=${username}" class="w-8 h-8 rounded-full"/>
-                    <span class="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-[#19212c] rounded-full"></span>
+                    <img src="https://ui-avatars.com/api/?name=${username}"
+                         class="w-8 h-8 rounded-full"/>
+                    <span class="absolute bottom-0 right-0 w-2 h-2 bg-green-500 border-2 border-[#19212c] rounded-full"></span>
                 </div>
-                <span class="text-gray-300">${username}</span>
+                <span class="text-gray-300 text-sm">${username}</span>
             </div>
         `).join('');
     }
