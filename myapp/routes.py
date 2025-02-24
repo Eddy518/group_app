@@ -318,26 +318,41 @@ def handle_update_request(data):
     room = f"group_{group_id}"
 
     group = Group.query.get_or_404(group_id)
-    members = group.get_members()
+
+    # Get members with their points
+    members = []
+    for member in group.get_members():
+        group_points = GroupPoints.query.filter_by(
+            user_id=member.id, group_id=group_id
+        ).first()
+        members.append(
+            {
+                "username": member.username,
+                "points": group_points.points if group_points else 0,
+                "id": member.id,
+            }
+        )
+
+    # Get top contributors
     top_contributors = (
-        User.query.join(GroupMember)
-        .filter(GroupMember.group_id == group_id)
-        .order_by(User.points.desc())
+        db.session.query(User, GroupPoints.points)
+        .join(GroupPoints)
+        .filter(GroupPoints.group_id == group_id)
+        .order_by(GroupPoints.points.desc())
         .limit(5)
         .all()
     )
 
+    top_contributors_list = [
+        {"username": user.username, "points": points, "id": user.id}
+        for user, points in top_contributors
+    ]
+
     emit(
         "status",
         {
-            "members": [
-                {"username": m.username, "points": m.points, "id": m.id}
-                for m in members
-            ],
-            "top_contributors": [
-                {"username": u.username, "points": u.points, "id": u.id}
-                for u in top_contributors
-            ],
+            "members": members,
+            "top_contributors": top_contributors_list,
             "online_users": list(online_users.get(group_id, set())),
             "online_count": len(online_users.get(group_id, set())),
         },
@@ -361,38 +376,47 @@ def process_message():
 
 
 @app.route("/groups/create/", methods=("GET", "POST"))
+@login_required
 def create_group():
     form = CreateGroupForm()
     if form.validate_on_submit():
-        print("hey")
-        if form.group_image.data:
-            group_picture_file = resize_group_image.save_picture(form.group_image.data)
-            group_title = form.group_title.data
-            group_description = form.group_description.data
-            group_tags = form.group_tags.data
+        try:
+            group_picture_file = "default.jpg"
+            if form.group_image.data:
+                group_picture_file = resize_group_image.save_picture(
+                    form.group_image.data
+                )
+
+            # Create the group
             group = Group(
-                group_title=group_title,
-                group_description=group_description,
+                group_title=form.group_title.data,
+                group_description=form.group_description.data,
                 group_picture_file=group_picture_file,
-                group_tags=group_tags,
+                group_tags=form.group_tags.data,
             )
+
+            # Add to database
             db.session.add(group)
-            db.session.commit()
-            flash("Group has successfully been created")
-            return redirect(url_for("home"))
-        else:
-            group_title = form.group_title.data
-            group_description = form.group_description.data
-            group_tags = form.group_tags.data
-            group = Group(
-                group_title=group_title,
-                group_description=group_description,
-                group_tags=group_tags,
+            db.session.flush()  # This assigns an ID to the group
+
+            # Add current user as admin member
+            group.add_admin(current_user)
+
+            # Create initial group points for creator
+            group_points = GroupPoints(
+                user_id=current_user.id, group_id=group.id, points=0
             )
-            db.session.add(group)
+            db.session.add(group_points)
+
             db.session.commit()
-            flash("Group has successfully been created")
-            return redirect(url_for("home"))
+            flash("Group has been created successfully!", "success")
+            return redirect(url_for("chat_group", group_id=group.id))
+
+        except Exception as e:
+            db.session.rollback()
+            flash("Error creating group. Please try again.", "error")
+            print(f"Error creating group: {e}")
+
     return render_template("groups/create_group.html", form=form)
 
 
@@ -442,6 +466,28 @@ def my_groups():
     )
 
     return render_template("groups/my_groups.html", groups=user_groups)
+
+
+@app.route("/group/<int:group_id>/leave")
+@login_required
+def leave_group(group_id):
+    group = Group.query.get_or_404(group_id)
+
+    if group.is_admin(current_user):
+        flash("Admins cannot leave the group. Transfer admin rights first.", "error")
+        return redirect(url_for("chat_group", group_id=group_id))
+
+    try:
+        group.remove_member(current_user)
+        # Remove user's points for this group
+        GroupPoints.query.filter_by(user_id=current_user.id, group_id=group_id).delete()
+        db.session.commit()
+        flash("You have left the group successfully", "success")
+        return redirect(url_for("home"))
+    except Exception as e:
+        db.session.rollback()
+        flash("Error leaving group. Please try again.", "error")
+        return redirect(url_for("chat_group", group_id=group_id))
 
 
 def send_token_email(tk):

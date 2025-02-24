@@ -58,6 +58,16 @@ class Group(db.Model):
     group_tags = db.Column(db.String(30))
     created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
 
+    def add_admin(self, user):
+        """Add a user as an admin member"""
+        membership = GroupMember.query.filter_by(user=user, group=self).first()
+        if not membership:
+            membership = GroupMember(user=user, group=self, is_admin=True)
+            db.session.add(membership)
+        else:
+            membership.is_admin = True
+        return membership
+
     def add_member(self, user):
         if not self.is_member(user):
             membership = GroupMember(user=user, group=self)
@@ -72,6 +82,11 @@ class Group(db.Model):
 
     def is_member(self, user):
         return GroupMember.query.filter_by(user=user, group=self).first() is not None
+
+    def is_admin(self, user):
+        """Check if user is an admin of the group"""
+        membership = GroupMember.query.filter_by(user=user, group=self).first()
+        return membership.is_admin if membership else False
 
     def get_members(self):
         return [membership.user for membership in self.members]
@@ -98,6 +113,7 @@ class GroupMember(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
     group_id = db.Column(db.Integer, db.ForeignKey("group.id"), nullable=False)
     joined_at = db.Column(db.DateTime, default=datetime.utcnow)
+    is_admin = db.Column(db.Boolean, default=False)
 
     user = db.relationship("User", backref="memberships")
     group = db.relationship("Group", backref="members")
