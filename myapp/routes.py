@@ -38,12 +38,60 @@ online_users = {}
 
 @app.route("/")
 def home():
-    groups = Group.query.order_by(Group.created_at.desc()).all()
+    # Get sort parameter
+    sort = request.args.get("sort", "")
+    tag_filter = request.args.get("tag", "")
+
+    # Base query
+    groups_query = Group.query
+
+    # Apply tag filter if specified
+    if tag_filter:
+        groups_query = groups_query.filter(Group.group_tags.like(f"%{tag_filter}%"))
+
+    # Apply sorting
+    if sort == "newest":
+        groups_query = groups_query.order_by(Group.created_at.desc())
+    elif sort == "oldest":
+        groups_query = groups_query.order_by(Group.created_at.asc())
+    elif sort == "members":
+        groups_query = (
+            groups_query.join(GroupMember)
+            .group_by(Group.id)
+            .order_by(db.func.count(GroupMember.id).desc())
+        )
+    elif sort == "active":
+        groups_query = (
+            groups_query.join(GroupMessage)
+            .group_by(Group.id)
+            .order_by(db.func.count(GroupMessage.id).desc())
+        )
+    else:
+        # Default sorting
+        groups_query = groups_query.order_by(Group.created_at.desc())
+
+    # Execute query
+    groups = groups_query.all()
+
+    # Get all unique tags
+    all_tags = set()
+    for group in Group.query.all():
+        if group.group_tags:
+            # Split tags and strip whitespace
+            tags = [tag.strip() for tag in group.group_tags.split(",")]
+            all_tags.update(tags)
+
+    # Sort tags alphabetically
+    all_tags = sorted(all_tags)
+
     return render_template(
         "index.html",
         current_user=current_user,
         current_page="home",
         groups=groups,
+        all_tags=all_tags,
+        selected_sort=sort,
+        selected_tag=tag_filter,
     )
 
 

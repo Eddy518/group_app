@@ -23,6 +23,10 @@
         scrollbar-width: thin;
         scrollbar-color: rgba(156, 163, 175, 0.3) transparent;
     }
+    .loading{
+        opacity:0.5;
+        pointer-events:none;
+    }
 </style>
 <div class="min-h-screen p-8 mt-16">
     <!-- Header Section -->
@@ -32,20 +36,27 @@
 
             <!-- Filters -->
             <div class="flex flex-wrap gap-4">
-                <select class="bg-[#19212c] text-gray-300 px-4 py-2 rounded-lg border border-gray-700 hover:border-blue-500 transition-colors focus:outline-none focus:border-blue-500">
-                    <option value="">Sort by...</option>
-                    <option value="newest">Newest First</option>
-                    <option value="oldest">Oldest First</option>
-                    <option value="members">Most Members</option>
-                    <option value="active">Most Active</option>
+                <select
+                    id="sort-select"
+                    class="bg-[#19212c] text-gray-300 px-4 py-2 rounded-lg border border-gray-700 hover:border-blue-500 transition-colors focus:outline-none focus:border-blue-500"
+                    onchange="updateFilters()"
+                >
+                    <option value="" {% if not selected_sort %}selected{% endif %}>Sort by...</option>
+                    <option value="newest" {% if selected_sort == 'newest' %}selected{% endif %}>Newest First</option>
+                    <option value="oldest" {% if selected_sort == 'oldest' %}selected{% endif %}>Oldest First</option>
+                    <option value="members" {% if selected_sort == 'members' %}selected{% endif %}>Most Members</option>
+                    <option value="active" {% if selected_sort == 'active' %}selected{% endif %}>Most Active</option>
                 </select>
 
-                <select class="bg-[#19212c] text-gray-300 px-4 py-2 rounded-lg border border-gray-700 hover:border-blue-500 transition-colors focus:outline-none focus:border-blue-500">
-                    <option value="">Filter by tag...</option>
-                    <option value="programming">Programming</option>
-                    <option value="design">Design</option>
-                    <option value="marketing">Marketing</option>
-                    <option value="business">Business</option>
+                <select
+                    id="tag-select"
+                    class="bg-[#19212c] text-gray-300 px-4 py-2 rounded-lg border border-gray-700 hover:border-blue-500 transition-colors focus:outline-none focus:border-blue-500"
+                    onchange="updateFilters()"
+                >
+                    <option value="" {% if not selected_tag %}selected{% endif %}>Filter by tag...</option>
+                    {% for tag in all_tags %}
+                    <option value="{{ tag }}" {% if selected_tag == tag %}selected{% endif %}>{{ tag }}</option>
+                    {% endfor %}
                 </select>
             </div>
         </div>

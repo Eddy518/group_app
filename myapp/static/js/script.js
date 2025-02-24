@@ -44,3 +44,31 @@ document.addEventListener("DOMContentLoaded", function () {
   let userTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
   document.cookie = "user_timezone=" + userTimezone + "; path=/";
 });
+function updateFilters() {
+    // Add loading state
+    document.body.classList.add('loading');
+
+    const sortSelect = document.getElementById('sort-select');
+    const tagSelect = document.getElementById('tag-select');
+
+    let url = new URL(window.location);
+
+    if (sortSelect.value) {
+        url.searchParams.set('sort', sortSelect.value);
+    } else {
+        url.searchParams.delete('sort');
+    }
+
+    if (tagSelect.value) {
+        url.searchParams.set('tag', tagSelect.value);
+    } else {
+        url.searchParams.delete('tag');
+    }
+
+    window.location = url;
+}
+
+// Remove loading state when page is loaded
+window.addEventListener('load', () => {
+    document.body.classList.remove('loading');
+});
