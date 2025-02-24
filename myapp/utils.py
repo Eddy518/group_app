@@ -10,7 +10,7 @@ from flask import request
 load_dotenv()
 
 
-def handle_points(message, sender_id, User):
+def handle_points(message, sender_id, group_id, User, GroupPoints):
     """Parse messages for @username++ and award points"""
     pattern = r"@(\w+)\+\+"
     matches = re.finditer(pattern, message)
@@ -21,11 +21,23 @@ def handle_points(message, sender_id, User):
         recipient = User.query.filter_by(username=username).first()
 
         if recipient and recipient.id != sender_id:
-            recipient.points += 1
+            # Get or create GroupPoints record
+            group_points = GroupPoints.query.filter_by(
+                user_id=recipient.id, group_id=group_id
+            ).first()
+
+            if not group_points:
+                group_points = GroupPoints(
+                    user_id=recipient.id, group_id=group_id, points=0
+                )
+                db.session.add(group_points)
+
+            group_points.points += 1
+
             recipients.append(
                 {
                     "username": recipient.username,
-                    "new_points": recipient.points,
+                    "new_points": group_points.points,
                     "awarder": User.query.get(sender_id).username,
                 }
             )

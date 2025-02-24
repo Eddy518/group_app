@@ -16,7 +16,13 @@ class User(db.Model, UserMixin):
     username = db.Column(db.String(20))
     email = db.Column(db.Text, unique=True, nullable=False)
     password = db.Column(db.Text, nullable=False)
-    points = db.Column(db.Integer, default=0)
+
+    def get_points_in_group(self, group_id):
+        group_points = GroupPoints.query.filter_by(
+            user_id=self.id, group_id=group_id
+        ).first()
+
+        return group_points.points if group_points else 0
 
     def to_dict(self):
         return {"username": self.username, "points": self.points}
@@ -72,6 +78,19 @@ class Group(db.Model):
 
     def __repr__(self) -> str:
         return f"Group ('{self.group_title}', '{self.group_description}','{self.group_picture_file}','{self.group_tags}','{self.created_at}')"
+
+
+class GroupPoints(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
+    group_id = db.Column(db.Integer, db.ForeignKey("group.id"), nullable=False)
+    points = db.Column(db.Integer, default=0)
+
+    user = db.relationship("User", backref="group_points")
+    group = db.relationship("Group", backref="user_points")
+
+    def __repr__(self):
+        return f"<GroupPoints user={self.user.username} group={self.group.group_title} points={self.points}>"
 
 
 class GroupMember(db.Model):

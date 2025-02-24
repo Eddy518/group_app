@@ -28,7 +28,7 @@ from myapp.form import (
     CreateGroupForm,
     EditGroupForm,
 )
-from myapp.models import User, Group, GroupMessage, GroupMember
+from myapp.models import User, Group, GroupMessage, GroupMember, GroupPoints
 
 from flask_socketio import emit, join_room, leave_room
 from myapp.utils import handle_points, convert_to_local
@@ -64,16 +64,16 @@ def format_datetime(timestamp):
 @login_required
 def get_top_contributors(group_id):
     top_contributors = (
-        User.query.join(GroupMember)
-        .filter(GroupMember.group_id == group_id)
-        .order_by(User.points.desc())
+        User.query.join(GroupPoints)
+        .filter(GroupPoints.group_id == group_id)
+        .order_by(GroupPoints.points.desc())
         .limit(5)
         .all()
     )
 
     return jsonify(
         [
-            {"username": user.username, "points": user.points}
+            {"username": user.username, "points": user.get_points_in_group(group_id)}
             for user in top_contributors
         ]
     )
@@ -84,9 +84,6 @@ def get_top_contributors(group_id):
 def chat_group(group_id):
     group = Group.query.get_or_404(group_id)
 
-    if group_id not in online_users:
-        online_users[group_id] = set()
-
     if not group.is_member(current_user):
         group.add_member(current_user)
         try:
@@ -96,6 +93,7 @@ def chat_group(group_id):
             db.session.rollback()
             flash("Error joining the group", "error")
             return redirect(url_for("home"))
+
     messages = (
         GroupMessage.query.filter_by(group_id=group_id)
         .order_by(GroupMessage.timestamp.desc())
@@ -103,18 +101,36 @@ def chat_group(group_id):
         .all()
     )
     messages.reverse()
-
     message_dicts = [msg.to_dict() for msg in messages]
 
-    members = group.get_members()
+    # Get members with their points
+    members = []
+    for member in group.get_members():
+        group_points = GroupPoints.query.filter_by(
+            user_id=member.id, group_id=group_id
+        ).first()
+        members.append(
+            {
+                "id": member.id,
+                "username": member.username,
+                "points": group_points.points if group_points else 0,
+            }
+        )
 
+    # Get top contributors
     top_contributors = (
-        User.query.join(GroupMember)
-        .filter(GroupMember.group_id == group_id)
-        .order_by(User.points.desc())
+        db.session.query(User, GroupPoints.points)
+        .join(GroupPoints)
+        .filter(GroupPoints.group_id == group_id)
+        .order_by(GroupPoints.points.desc())
         .limit(5)
         .all()
     )
+
+    top_contributors_list = [
+        {"id": user.id, "username": user.username, "points": points}
+        for user, points in top_contributors
+    ]
 
     if group_id not in online_users:
         online_users[group_id] = set()
@@ -125,7 +141,7 @@ def chat_group(group_id):
         messages=message_dicts,
         current_user=current_user,
         members=members,
-        top_contributors=top_contributors,
+        top_contributors=top_contributors_list,
         online_users=online_users[group_id],
         online_count=len(online_users.get(group_id, set())),
     )
@@ -137,21 +153,39 @@ def on_join(data):
     room = f"group_{group_id}"
     join_room(room)
 
-    # Track online users
     if group_id not in online_users:
         online_users[group_id] = set()
     online_users[group_id].add(current_user.username)
 
+    # Get updated member list with points
     group = Group.query.get_or_404(group_id)
-    members = group.get_members()
+    members = []
+    for member in group.get_members():
+        group_points = GroupPoints.query.filter_by(
+            user_id=member.id, group_id=group_id
+        ).first()
+        members.append(
+            {
+                "id": member.id,
+                "username": member.username,
+                "points": group_points.points if group_points else 0,
+            }
+        )
 
+    # Get updated top contributors
     top_contributors = (
-        User.query.join(GroupMember)
-        .filter(GroupMember.group_id == group_id)
-        .order_by(User.points.desc())
+        db.session.query(User, GroupPoints.points)
+        .join(GroupPoints)
+        .filter(GroupPoints.group_id == group_id)
+        .order_by(GroupPoints.points.desc())
         .limit(5)
         .all()
     )
+
+    top_contributors_list = [
+        {"id": user.id, "username": user.username, "points": points}
+        for user, points in top_contributors
+    ]
 
     emit(
         "status",
@@ -161,14 +195,8 @@ def on_join(data):
             "username": current_user.username,
             "online_count": len(online_users[group_id]),
             "online_users": list(online_users[group_id]),
-            "members": [
-                {"username": member.username, "points": member.points, "id": member.id}
-                for member in members
-            ],
-            "top_contributors": [
-                {"username": user.username, "points": user.points, "id": user.id}
-                for user in top_contributors
-            ],
+            "members": members,
+            "top_contributors": top_contributors_list,
         },
         room=room,
         broadcast=True,
@@ -228,7 +256,7 @@ def handle_message(data):
     message = GroupMessage(content=content, user_id=current_user.id, group_id=group_id)
     db.session.add(message)
 
-    recipients = handle_points(content, current_user.id, User)
+    recipients = handle_points(content, current_user.id, group_id, User, GroupPoints)
 
     try:
         db.session.commit()
@@ -236,7 +264,7 @@ def handle_message(data):
             "message",
             {
                 "id": message.id,
-                "msg": content,  # Send the original content, not the method reference
+                "msg": content,
                 "user": current_user.username,
                 "timestamp": message.timestamp.isoformat(),
                 "points_awarded": recipients,
@@ -255,6 +283,30 @@ def handle_message(data):
                     },
                     room=room,
                 )
+
+            # Send updated top contributors after points are awarded
+            top_contributors = (
+                db.session.query(User, GroupPoints.points)
+                .join(GroupPoints)
+                .filter(GroupPoints.group_id == group_id)
+                .order_by(GroupPoints.points.desc())
+                .limit(5)
+                .all()
+            )
+
+            top_contributors_list = [
+                {"id": user.id, "username": user.username, "points": points}
+                for user, points in top_contributors
+            ]
+
+            emit(
+                "status",
+                {
+                    "top_contributors": top_contributors_list,
+                },
+                room=room,
+            )
+
     except:
         db.session.rollback()
         emit("error", {"msg": "Failed to send message"}, room=room)
@@ -327,7 +379,7 @@ def create_group():
             db.session.add(group)
             db.session.commit()
             flash("Group has successfully been created")
-            redirect(url_for("home"))
+            return redirect(url_for("home"))
         else:
             group_title = form.group_title.data
             group_description = form.group_description.data
@@ -340,7 +392,7 @@ def create_group():
             db.session.add(group)
             db.session.commit()
             flash("Group has successfully been created")
-            redirect(url_for("home"))
+            return redirect(url_for("home"))
     return render_template("groups/create_group.html", form=form)
 
 
@@ -356,11 +408,40 @@ def group_info(id):
     if not group:
         abort(404)
     print(group)
+    members = []
+    for member in group.get_members():
+        group_points = GroupPoints.query.filter_by(
+            user_id=member.id, group_id=id
+        ).first()
+        members.append(
+            {
+                "id": member.id,
+                "username": member.username,
+                "points": group_points.points if group_points else 0,
+            }
+        )
+    messages = GroupMessage.query.filter_by(group_id=id).all()
     return render_template(
         "groups/group_info.html",
         group=group,
+        members=members,
+        messages=messages,
         created_time=convert_to_local(group.created_at),
     )
+
+
+@app.route("/my-groups")
+@login_required
+def my_groups():
+    # Get all groups the user is a member of
+    user_groups = (
+        Group.query.join(GroupMember)
+        .filter(GroupMember.user_id == current_user.id)
+        .order_by(Group.created_at.desc())
+        .all()
+    )
+
+    return render_template("groups/my_groups.html", groups=user_groups)
 
 
 def send_token_email(tk):
