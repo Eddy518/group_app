@@ -521,10 +521,54 @@ def my_groups():
 def leave_group(group_id):
     group = Group.query.get_or_404(group_id)
 
+    # Check if user is an admin
     if group.is_admin(current_user):
-        flash("Admins cannot leave the group. Transfer admin rights first.", "error")
-        return redirect(url_for("chat_group", group_id=group_id))
+        # Get all members except current user, ordered by join date
+        next_admin = (
+            GroupMember.query.filter(
+                GroupMember.group_id == group_id, GroupMember.user_id != current_user.id
+            )
+            .order_by(GroupMember.joined_at)
+            .first()
+        )
 
+        if next_admin:
+            # Transfer admin rights to the oldest member
+            next_admin.is_admin = True
+            try:
+                # Remove current user
+                group.remove_member(current_user)
+                # Remove user's points for this group
+                GroupPoints.query.filter_by(
+                    user_id=current_user.id, group_id=group_id
+                ).delete()
+                db.session.commit()
+                flash(
+                    f"Admin rights transferred to {next_admin.user.username}. You have left the group.",
+                    "success",
+                )
+                return redirect(url_for("home"))
+            except Exception as e:
+                db.session.rollback()
+                flash("Error leaving group. Please try again.", "error")
+                return redirect(url_for("chat_group", group_id=group_id))
+        else:
+            # No other members, delete the group
+            try:
+                # Delete all related records
+                GroupPoints.query.filter_by(group_id=group_id).delete()
+                GroupMessage.query.filter_by(group_id=group_id).delete()
+                GroupMember.query.filter_by(group_id=group_id).delete()
+                db.session.delete(group)
+                db.session.commit()
+                flash("You were the last member. The group has been deleted.", "info")
+                return redirect(url_for("home"))
+            except Exception as e:
+                db.session.rollback()
+                flash("Error deleting group. Please try again.", "error")
+                return redirect(url_for("chat_group", group_id=group_id))
+
+    # Regular member leaving
     try:
         group.remove_member(current_user)
         # Remove user's points for this group
