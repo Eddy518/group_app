@@ -21,7 +21,7 @@
         {% for group in groups %}
         <a href="{{ url_for('group_info', id=group.id) }}"
            class="block group">
-            <div class="bg-[#19212c] rounded-lg overflow-hidden shadow-lg border border-gray-700 hover:border-blue-500 transition-all duration-300 transform hover:-translate-y-1">
+            <div class="bg-[#19212c] rounded-lg h-[427px] overflow-hidden shadow-lg border border-gray-700 hover:border-blue-500 transition-all duration-300 transform hover:-translate-y-1">
                 <!-- Group Image -->
                 <div class="relative h-48 overflow-hidden">
                     <img src="{{ url_for('static', filename='assets/group_icons/' + group.group_picture_file) }}"
