@@ -57,6 +57,12 @@ class Group(db.Model):
     group_picture_file = db.Column(db.String(20), default="default.jpg", nullable=False)
     group_tags = db.Column(db.String(30))
     created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+    bitz = db.Column(db.Integer, default=0)
+
+    def award_bitz(self, amount=1):
+        """Award bitz to a group"""
+        self.bitz += amount
+        db.session.commit()
 
     def add_admin(self, user):
         """Add a user as an admin member"""
@@ -157,3 +163,14 @@ class GroupMessage(db.Model):
                 "username": self.user.username,
             },
         }
+
+
+class GroupBitzLog(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
+    group_id = db.Column(db.Integer, db.ForeignKey("group.id"), nullable=False)
+    amount = db.Column(db.Integer, default=1)
+    awarded_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    user = db.relationship("User", backref="bitz_awards")
+    group = db.relationship("Group", backref="bitz_logs")

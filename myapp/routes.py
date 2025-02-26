@@ -28,7 +28,14 @@ from myapp.form import (
     CreateGroupForm,
     EditGroupForm,
 )
-from myapp.models import User, Group, GroupMessage, GroupMember, GroupPoints
+from myapp.models import (
+    User,
+    Group,
+    GroupMessage,
+    GroupMember,
+    GroupPoints,
+    GroupBitzLog,
+)
 
 from flask_socketio import emit, join_room, leave_room
 from myapp.utils import handle_points, convert_to_local
@@ -277,22 +284,23 @@ def on_leave(data):
 
 @socketio.on("disconnect")
 def on_disconnect():
-    # Clean up when user disconnects
-    for group_id in list(online_users.keys()):
-        if current_user.username in online_users[group_id]:
-            online_users[group_id].discard(current_user.username)
-            room = f"group_{group_id}"
-            emit(
-                "status",
-                {
-                    "msg": f"{current_user.username} has disconnected",
-                    "type": "leave",
-                    "username": current_user.username,
-                    "online_count": len(online_users[group_id]),
-                },
-                room=room,
-                broadcast=True,
-            )
+    if current_user.is_authenticated:  # Add this check
+        # Clean up when user disconnects
+        for group_id in list(online_users.keys()):
+            if current_user.username in online_users[group_id]:
+                online_users[group_id].discard(current_user.username)
+                room = f"group_{group_id}"
+                emit(
+                    "status",
+                    {
+                        "msg": f"{current_user.username} has disconnected",
+                        "type": "leave",
+                        "username": current_user.username,
+                        "online_count": len(online_users[group_id]),
+                    },
+                    room=room,
+                    broadcast=True,
+                )
 
 
 @socketio.on("message")
@@ -411,6 +419,99 @@ def handle_update_request(data):
 @app.route("/award_points")
 def award_points():
     pass
+
+
+@app.route("/group/<int:group_id>/award-bitz", methods=["POST"])
+@login_required
+def award_group_bitz(group_id):
+    try:
+        print(f"Received request to award bitz to group {group_id}")
+        print(f"Current user: {current_user.username}")
+        print(f"Request method: {request.method}")
+        print(f"Request headers: {dict(request.headers)}")
+
+        group = Group.query.get_or_404(group_id)
+
+        # Check if user has already awarded bitz today
+        today = datetime.utcnow().date()
+        already_awarded = GroupBitzLog.query.filter(
+            GroupBitzLog.user_id == current_user.id,
+            GroupBitzLog.group_id == group_id,
+            db.func.date(GroupBitzLog.awarded_at) == today,
+        ).first()
+
+        if already_awarded:
+            print("User already awarded bitz today")
+            return jsonify({"error": "You can only award bitz once per day"}), 400
+
+        # Award bitz
+        group.bitz += 1
+
+        # Create log entry
+        log = GroupBitzLog(user_id=current_user.id, group_id=group_id, amount=1)
+        db.session.add(log)
+        db.session.commit()
+
+        print(f"Successfully awarded bitz to group {group_id}")
+        return jsonify(
+            {
+                "success": True,
+                "new_bitz": group.bitz,
+                "message": "Bitz awarded successfully!",
+            }
+        )
+
+    except Exception as e:
+        print(f"Error in award_group_bitz: {str(e)}")
+        db.session.rollback()
+        return jsonify({"error": "Failed to award bitz", "details": str(e)}), 500
+
+
+@app.route("/search")
+def search_groups():
+    tags = [tag.strip() for tag in request.args.getlist("tags") if tag.strip()]
+    sort = request.args.get("sort", "")
+
+    # Start with all groups
+    query = Group.query
+
+    # Apply tag filters if specified
+    if tags:
+        # Filter groups that have ANY of the selected tags
+        conditions = []
+        for tag in tags:
+            conditions.append(Group.group_tags.ilike(f"%{tag}%"))
+        if conditions:
+            query = query.filter(db.or_(*conditions))
+
+    # Apply sorting
+    if sort == "bitz_high":
+        query = query.order_by(Group.bitz.desc())
+    elif sort == "bitz_low":
+        query = query.order_by(Group.bitz.asc())
+    else:
+        query = query.order_by(Group.created_at.desc())
+
+    groups = query.all()
+
+    # Get all unique tags from existing groups
+    all_tags = set()
+    for group in Group.query.all():
+        if group.group_tags:
+            group_tags = [tag.strip() for tag in group.group_tags.split(",")]
+            all_tags.update(group_tags)
+
+    print(f"Query results: {len(groups)} groups found")  # Debug print
+    print(f"Applied tags: {tags}")  # Debug print
+    print(f"Sort order: {sort}")  # Debug print
+
+    return render_template(
+        "search_groups.html",
+        groups=groups,
+        all_tags=sorted(all_tags),
+        selected_tags=tags,
+        sort=sort,
+    )
 
 
 @app.route("/api/process-message", methods=["POST"])
