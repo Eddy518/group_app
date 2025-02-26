@@ -43,6 +43,238 @@ from myapp.utils import handle_points, convert_to_local
 online_users = {}
 
 
+@app.template_filter("formatdatetime")
+def format_datetime(timestamp):
+    """Convert UTC timestamp to local time and format it"""
+    if isinstance(timestamp, str):
+        try:
+            timestamp = datetime.fromisoformat(timestamp)
+        except:
+            return timestamp
+
+    local_time = convert_to_local(timestamp)
+    return local_time.strftime("%I:%M %p")
+
+
+@socketio.on("join")
+def on_join(data):
+    """Handle connection when a user joins"""
+    group_id = data["group_id"]
+    room = f"group_{group_id}"
+    join_room(room)
+
+    if group_id not in online_users:
+        online_users[group_id] = set()
+    online_users[group_id].add(current_user.username)
+
+    # Get updated member list with points
+    group = Group.query.get_or_404(group_id)
+    members = []
+    for member in group.get_members():
+        group_points = GroupPoints.query.filter_by(
+            user_id=member.id, group_id=group_id
+        ).first()
+        members.append(
+            {
+                "id": member.id,
+                "username": member.username,
+                "points": group_points.points if group_points else 0,
+            }
+        )
+
+    # Get updated top contributors
+    top_contributors = (
+        db.session.query(User, GroupPoints.points)
+        .join(GroupPoints)
+        .filter(GroupPoints.group_id == group_id)
+        .order_by(GroupPoints.points.desc())
+        .limit(5)
+        .all()
+    )
+
+    top_contributors_list = [
+        {"id": user.id, "username": user.username, "points": points}
+        for user, points in top_contributors
+    ]
+
+    emit(
+        "status",
+        {
+            "msg": f"{current_user.username} has joined the chat",
+            "type": "join",
+            "username": current_user.username,
+            "online_count": len(online_users[group_id]),
+            "online_users": list(online_users[group_id]),
+            "members": members,
+            "top_contributors": top_contributors_list,
+        },
+        room=room,
+        broadcast=True,
+    )
+
+
+@socketio.on("leave")
+def on_leave(data):
+    """Handle connection if a member exits"""
+    group_id = data["group_id"]
+    room = f"group_{group_id}"
+    leave_room(room)
+
+    if group_id in online_users:
+        online_users[group_id].discard(current_user.id)
+    emit(
+        "status",
+        {
+            "msg": f"{current_user.username} has left the chat",
+            "type": "leave",
+            "username": current_user.username,
+            "online_count": (
+                len(online_users[group_id]) if group_id in online_users else 0
+            ),
+            "online_users": list(online_users[group_id]),
+        },
+        room=room,
+        broadcast=True,
+    )
+
+
+@socketio.on("disconnect")
+def on_disconnect():
+    """Handle incase of a connection loss or a disconnect"""
+    if current_user.is_authenticated:  # Add this check
+        # Clean up when user disconnects
+        for group_id in list(online_users.keys()):
+            if current_user.username in online_users[group_id]:
+                online_users[group_id].discard(current_user.username)
+                room = f"group_{group_id}"
+                emit(
+                    "status",
+                    {
+                        "msg": f"{current_user.username} has disconnected",
+                        "type": "leave",
+                        "username": current_user.username,
+                        "online_count": len(online_users[group_id]),
+                    },
+                    room=room,
+                    broadcast=True,
+                )
+
+
+@socketio.on("message")
+def handle_message(data):
+    """Message communication between parties"""
+    content = data["message"]
+    group_id = data["group_id"]
+    room = f"group_{group_id}"
+
+    message = GroupMessage(content=content, user_id=current_user.id, group_id=group_id)
+    db.session.add(message)
+
+    recipients = handle_points(content, current_user.id, group_id, User, GroupPoints)
+
+    try:
+        db.session.commit()
+        emit(
+            "message",
+            {
+                "id": message.id,
+                "msg": content,
+                "user": current_user.username,
+                "timestamp": message.timestamp.isoformat(),
+                "points_awarded": recipients,
+            },
+            room=room,
+        )
+
+        if recipients:
+            for recipient in recipients:
+                emit(
+                    "points_awarded",
+                    {
+                        "recipient": recipient["username"],
+                        "awarder": recipient["awarder"],
+                        "new_points": recipient["new_points"],
+                    },
+                    room=room,
+                )
+
+            # Send updated top contributors after points are awarded
+            top_contributors = (
+                db.session.query(User, GroupPoints.points)
+                .join(GroupPoints)
+                .filter(GroupPoints.group_id == group_id)
+                .order_by(GroupPoints.points.desc())
+                .limit(5)
+                .all()
+            )
+
+            top_contributors_list = [
+                {"id": user.id, "username": user.username, "points": points}
+                for user, points in top_contributors
+            ]
+
+            emit(
+                "status",
+                {
+                    "top_contributors": top_contributors_list,
+                },
+                room=room,
+            )
+
+    except:
+        db.session.rollback()
+        emit("error", {"msg": "Failed to send message"}, room=room)
+
+
+@socketio.on("request_updates")
+def handle_update_request(data):
+    """In event of an update such as assigning points to a user"""
+    group_id = data["group_id"]
+    room = f"group_{group_id}"
+
+    group = Group.query.get_or_404(group_id)
+
+    # Get members with their points
+    members = []
+    for member in group.get_members():
+        group_points = GroupPoints.query.filter_by(
+            user_id=member.id, group_id=group_id
+        ).first()
+        members.append(
+            {
+                "username": member.username,
+                "points": group_points.points if group_points else 0,
+                "id": member.id,
+            }
+        )
+
+    # Get top contributors
+    top_contributors = (
+        db.session.query(User, GroupPoints.points)
+        .join(GroupPoints)
+        .filter(GroupPoints.group_id == group_id)
+        .order_by(GroupPoints.points.desc())
+        .limit(5)
+        .all()
+    )
+
+    top_contributors_list = [
+        {"username": user.username, "points": points, "id": user.id}
+        for user, points in top_contributors
+    ]
+
+    emit(
+        "status",
+        {
+            "members": members,
+            "top_contributors": top_contributors_list,
+            "online_users": list(online_users.get(group_id, set())),
+            "online_count": len(online_users.get(group_id, set())),
+        },
+        room=room,
+    )
+
+
 @app.route("/")
 def home():
     # Get sort parameter
@@ -100,19 +332,6 @@ def home():
         selected_sort=sort,
         selected_tag=tag_filter,
     )
-
-
-@app.template_filter("formatdatetime")
-def format_datetime(timestamp):
-    """Convert UTC timestamp to local time and format it"""
-    if isinstance(timestamp, str):
-        try:
-            timestamp = datetime.fromisoformat(timestamp)
-        except:
-            return timestamp
-
-    local_time = convert_to_local(timestamp)
-    return local_time.strftime("%I:%M %p")
 
 
 @app.route("/api/group/<int:group_id>/top-contributors")
@@ -199,220 +418,6 @@ def chat_group(group_id):
         top_contributors=top_contributors_list,
         online_users=online_users[group_id],
         online_count=len(online_users.get(group_id, set())),
-    )
-
-
-@socketio.on("join")
-def on_join(data):
-    group_id = data["group_id"]
-    room = f"group_{group_id}"
-    join_room(room)
-
-    if group_id not in online_users:
-        online_users[group_id] = set()
-    online_users[group_id].add(current_user.username)
-
-    # Get updated member list with points
-    group = Group.query.get_or_404(group_id)
-    members = []
-    for member in group.get_members():
-        group_points = GroupPoints.query.filter_by(
-            user_id=member.id, group_id=group_id
-        ).first()
-        members.append(
-            {
-                "id": member.id,
-                "username": member.username,
-                "points": group_points.points if group_points else 0,
-            }
-        )
-
-    # Get updated top contributors
-    top_contributors = (
-        db.session.query(User, GroupPoints.points)
-        .join(GroupPoints)
-        .filter(GroupPoints.group_id == group_id)
-        .order_by(GroupPoints.points.desc())
-        .limit(5)
-        .all()
-    )
-
-    top_contributors_list = [
-        {"id": user.id, "username": user.username, "points": points}
-        for user, points in top_contributors
-    ]
-
-    emit(
-        "status",
-        {
-            "msg": f"{current_user.username} has joined the chat",
-            "type": "join",
-            "username": current_user.username,
-            "online_count": len(online_users[group_id]),
-            "online_users": list(online_users[group_id]),
-            "members": members,
-            "top_contributors": top_contributors_list,
-        },
-        room=room,
-        broadcast=True,
-    )
-
-
-@socketio.on("leave")
-def on_leave(data):
-    group_id = data["group_id"]
-    room = f"group_{group_id}"
-    leave_room(room)
-
-    if group_id in online_users:
-        online_users[group_id].discard(current_user.id)
-    emit(
-        "status",
-        {
-            "msg": f"{current_user.username} has left the chat",
-            "type": "leave",
-            "username": current_user.username,
-            "online_count": (
-                len(online_users[group_id]) if group_id in online_users else 0
-            ),
-            "online_users": list(online_users[group_id]),
-        },
-        room=room,
-        broadcast=True,
-    )
-
-
-@socketio.on("disconnect")
-def on_disconnect():
-    if current_user.is_authenticated:  # Add this check
-        # Clean up when user disconnects
-        for group_id in list(online_users.keys()):
-            if current_user.username in online_users[group_id]:
-                online_users[group_id].discard(current_user.username)
-                room = f"group_{group_id}"
-                emit(
-                    "status",
-                    {
-                        "msg": f"{current_user.username} has disconnected",
-                        "type": "leave",
-                        "username": current_user.username,
-                        "online_count": len(online_users[group_id]),
-                    },
-                    room=room,
-                    broadcast=True,
-                )
-
-
-@socketio.on("message")
-def handle_message(data):
-    content = data["message"]
-    group_id = data["group_id"]
-    room = f"group_{group_id}"
-
-    message = GroupMessage(content=content, user_id=current_user.id, group_id=group_id)
-    db.session.add(message)
-
-    recipients = handle_points(content, current_user.id, group_id, User, GroupPoints)
-
-    try:
-        db.session.commit()
-        emit(
-            "message",
-            {
-                "id": message.id,
-                "msg": content,
-                "user": current_user.username,
-                "timestamp": message.timestamp.isoformat(),
-                "points_awarded": recipients,
-            },
-            room=room,
-        )
-
-        if recipients:
-            for recipient in recipients:
-                emit(
-                    "points_awarded",
-                    {
-                        "recipient": recipient["username"],
-                        "awarder": recipient["awarder"],
-                        "new_points": recipient["new_points"],
-                    },
-                    room=room,
-                )
-
-            # Send updated top contributors after points are awarded
-            top_contributors = (
-                db.session.query(User, GroupPoints.points)
-                .join(GroupPoints)
-                .filter(GroupPoints.group_id == group_id)
-                .order_by(GroupPoints.points.desc())
-                .limit(5)
-                .all()
-            )
-
-            top_contributors_list = [
-                {"id": user.id, "username": user.username, "points": points}
-                for user, points in top_contributors
-            ]
-
-            emit(
-                "status",
-                {
-                    "top_contributors": top_contributors_list,
-                },
-                room=room,
-            )
-
-    except:
-        db.session.rollback()
-        emit("error", {"msg": "Failed to send message"}, room=room)
-
-
-@socketio.on("request_updates")
-def handle_update_request(data):
-    group_id = data["group_id"]
-    room = f"group_{group_id}"
-
-    group = Group.query.get_or_404(group_id)
-
-    # Get members with their points
-    members = []
-    for member in group.get_members():
-        group_points = GroupPoints.query.filter_by(
-            user_id=member.id, group_id=group_id
-        ).first()
-        members.append(
-            {
-                "username": member.username,
-                "points": group_points.points if group_points else 0,
-                "id": member.id,
-            }
-        )
-
-    # Get top contributors
-    top_contributors = (
-        db.session.query(User, GroupPoints.points)
-        .join(GroupPoints)
-        .filter(GroupPoints.group_id == group_id)
-        .order_by(GroupPoints.points.desc())
-        .limit(5)
-        .all()
-    )
-
-    top_contributors_list = [
-        {"username": user.username, "points": points, "id": user.id}
-        for user, points in top_contributors
-    ]
-
-    emit(
-        "status",
-        {
-            "members": members,
-            "top_contributors": top_contributors_list,
-            "online_users": list(online_users.get(group_id, set())),
-            "online_count": len(online_users.get(group_id, set())),
-        },
-        room=room,
     )
 
 
@@ -816,7 +821,8 @@ def login():
 @app.route("/signup/", methods=["GET", "POST"])
 def register():
     if current_user.is_authenticated:
-        return redirect(url_for("home"))
+        logout_user()
+        return redirect(url_for("register"))
 
     form = RegisterForm()
     if request.method == "POST":
