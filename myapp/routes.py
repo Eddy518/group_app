@@ -514,6 +514,35 @@ def search_groups():
     )
 
 
+@app.route("/group/<int:group_id>/delete")
+@login_required
+def delete_group(group_id):
+    group = Group.query.get_or_404(group_id)
+
+    # Check if user is admin of the group
+    if not group.is_admin(current_user):
+        flash("You don't have permission to delete this group.", "error")
+        return redirect(url_for("my_groups"))
+
+    try:
+        # Delete all related records
+        GroupPoints.query.filter_by(group_id=group_id).delete()
+        GroupMessage.query.filter_by(group_id=group_id).delete()
+        GroupMember.query.filter_by(group_id=group_id).delete()
+
+        # Delete the group
+        db.session.delete(group)
+        db.session.commit()
+
+        flash("Group has been successfully deleted.", "success")
+    except Exception as e:
+        db.session.rollback()
+        flash("An error occurred while deleting the group.", "error")
+        print(f"Error deleting group: {e}")
+
+    return redirect(url_for("my_groups"))
+
+
 @app.route("/api/process-message", methods=["POST"])
 @login_required
 def process_message():
@@ -614,7 +643,9 @@ def my_groups():
         .all()
     )
 
-    return render_template("groups/my_groups.html", groups=user_groups)
+    return render_template(
+        "groups/my_groups.html", groups=user_groups, current_user=current_user
+    )
 
 
 @app.route("/group/<int:group_id>/leave")
