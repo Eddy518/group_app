@@ -28,17 +28,28 @@ class User(db.Model, UserMixin):
         return {"username": self.username, "points": self.points}
 
     def get_reset_token(self, expires_sec=1800):
-        s = Serializer(app.config["SECRET_KEY"], expires_sec)
-        return s.dumps({"user_id": self.id}).decode("utf-8")
+        s = Serializer(app.config["SECRET_KEY"])
+        return s.dumps({"user_id": self.id}, salt=self.password)
 
     @staticmethod
-    def verify_reset_token(token):
+    def verify_reset_token(token, user_id):
         s = Serializer(app.config["SECRET_KEY"])
+        user = User.query.get(user_id)
+
+        if not user:
+            return None
+
         try:
-            user_id = s.loads(token)["user_id"]
+            # Validate the token with the user's password as salt
+            data = s.loads(token, salt=user.password, max_age=1800)
+
+            # Confirm token is for this user
+            if data.get("user_id") != user.id:
+                return None
+
+            return user
         except:
             return None
-        return User.query.get(user_id)
 
     def remove(self):
         db.session.delete(self)
