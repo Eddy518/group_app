@@ -12,12 +12,15 @@ load_dotenv()
 
 def handle_points(message, sender_id, group_id, User, GroupPoints):
     """Parse messages for @username++ and award points"""
-    pattern = r"@(\w+)\+\+"
+    # Updated pattern to match usernames that may contain spaces
+    # The pattern looks for @, followed by any characters until ++
+    pattern = r"@([^+]+)\+\+"
     matches = re.finditer(pattern, message)
     recipients = []
 
     for match in matches:
-        username = match.group(1)
+        # Trim any leading/trailing whitespace from the username
+        username = match.group(1).strip()
         recipient = User.query.filter_by(username=username).first()
 
         if recipient and recipient.id != sender_id:

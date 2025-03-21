@@ -31,30 +31,22 @@ def password_check(form, field):
         raise ValidationError("Password must be at least 8 characters long")
 
     if not re.search(r"[A-Z]", password):
-        raise ValidationError(
-            "Password must contain at least one uppercase letter"
-        )
+        raise ValidationError("Password must contain at least one uppercase letter")
 
     if not re.search(r"[a-z]", password):
-        raise ValidationError(
-            "Password must contain at least one lowercase letter"
-        )
+        raise ValidationError("Password must contain at least one lowercase letter")
 
     if not re.search(r"[0-9]", password):
         raise ValidationError("Password must contain at least one number")
 
     if not re.search(r'[!@#$%^&*(),.?":{}|<>]', password):
-        raise ValidationError(
-            "Password must contain at least one special character"
-        )
+        raise ValidationError("Password must contain at least one special character")
 
 
 class RegisterForm(FlaskForm):
     username = StringField(validators=[DataRequired(), Length(min=3, max=50)])
     email = EmailField(validators=[Email(), DataRequired()])
-    password = PasswordField(
-        validators=[DataRequired(), Length(min=6), password_check]
-    )
+    password = PasswordField(validators=[DataRequired(), Length(min=6), password_check])
     confirm_password = PasswordField(
         validators=[DataRequired(), EqualTo("password"), Length(min=6)]
     )
@@ -65,11 +57,16 @@ class RegisterForm(FlaskForm):
         if user:
             raise ValidationError("Email already exists.")
 
+    def validate_username(self, username):
+        user = User.query.filter_by(username=username.data).first()
+        if user:
+            raise ValidationError(
+                "Username already exists. Please choose a different username."
+            )
+
 
 class TwoFactorForm(FlaskForm):
-    token = StringField(
-        "Verification Code", validators=[DataRequired(), Length(8, 8)]
-    )
+    token = StringField("Verification Code", validators=[DataRequired(), Length(8, 8)])
     submit = SubmitField("Submit")
 
 
@@ -117,6 +114,14 @@ class UpdateAccountForm(FlaskForm):
             user = User.query.filter_by(email=email.data).first()
             if user:
                 raise ValidationError("Email already exists.")
+
+    def validate_username(self, username):
+        if current_user.username != username.data:
+            user = User.query.filter_by(username=username.data).first()
+            if user:
+                raise ValidationError(
+                    "Username already exists. Please choose a different username."
+                )
 
 
 class UpdatePasswordForm(FlaskForm):

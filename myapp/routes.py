@@ -2,19 +2,42 @@ import secrets
 from datetime import datetime
 
 import pytz
-from flask import (abort, flash, jsonify, redirect, render_template, request,
-                   session, url_for)
+from flask import (
+    abort,
+    flash,
+    jsonify,
+    redirect,
+    render_template,
+    request,
+    session,
+    url_for,
+)
 from flask_login import current_user, login_required, login_user, logout_user
 from flask_login.login_manager import timedelta
 from flask_mail import Message
 from flask_socketio import emit, join_room, leave_room
+from sqlalchemy.exc import IntegrityError
 
 from myapp import app, bcrypt, db, mail, resize_group_image, socketio
-from myapp.form import (CreateGroupForm, EditGroupForm, LoginForm,
-                        PasswordResetForm, RegisterForm, RequestResetForm,
-                        TwoFactorForm, UpdateAccountForm, UpdatePasswordForm)
-from myapp.models import (Group, GroupBitzLog, GroupMember, GroupMessage,
-                          GroupPoints, User)
+from myapp.form import (
+    CreateGroupForm,
+    EditGroupForm,
+    LoginForm,
+    PasswordResetForm,
+    RegisterForm,
+    RequestResetForm,
+    TwoFactorForm,
+    UpdateAccountForm,
+    UpdatePasswordForm,
+)
+from myapp.models import (
+    Group,
+    GroupBitzLog,
+    GroupMember,
+    GroupMessage,
+    GroupPoints,
+    User,
+)
 from myapp.utils import convert_to_local, handle_points
 
 online_users = {}
@@ -407,10 +430,10 @@ def award_points():
 @login_required
 def award_group_bitz(group_id):
     try:
-        print(f"Received request to award bitz to group {group_id}")
-        print(f"Current user: {current_user.username}")
-        print(f"Request method: {request.method}")
-        print(f"Request headers: {dict(request.headers)}")
+        # print(f"Received request to award bitz to group {group_id}")
+        # print(f"Current user: {current_user.username}")
+        # print(f"Request method: {request.method}")
+        # print(f"Request headers: {dict(request.headers)}")
 
         group = Group.query.get_or_404(group_id)
 
@@ -591,7 +614,7 @@ def group_info(id):
     group = Group.query.filter_by(id=id).first()
     if not group:
         abort(404)
-    print(group)
+    # print(group)
     members = []
     for member in group.get_members():
         group_points = GroupPoints.query.filter_by(
@@ -698,10 +721,10 @@ def leave_group(group_id):
 
 def send_token_email(tk):
     verification_code = tk
-    print(session)
+    # print(session)
     email = session["email"]
-    print(verification_code)
-    print(email)
+    # print(verification_code)
+    # print(email)
     msg = Message(
         "2-Step Verification Code",
         sender=app.config["MAIL_USERNAME"],
@@ -815,15 +838,22 @@ def register():
                 password=hashed_password,
             )
 
-            db.session.add(user)
-            db.session.commit()
-            session["email"] = email
+            try:
+                db.session.add(user)
+                db.session.commit()
+                session["email"] = email
 
-            flash(
-                "Account created successfully! Please proceed to login.",
-                "success",
-            )
-            return redirect(url_for("login"))
+                flash(
+                    "Account created successfully! Please proceed to login.",
+                    "success",
+                )
+                return redirect(url_for("login"))
+            except IntegrityError:
+                db.session.rollback()
+                flash(
+                    "Username or email already exists. Please choose different credentials.",
+                    "error",
+                )
 
     return render_template("register_user.html", form=form, current_page="register")
 
@@ -888,8 +918,8 @@ def reset_token(token, user_id):
 
         flash("Your password has been updated! You can now log in.", "success")
         return redirect(url_for("login"))
-    print(f"Received token: {token}")
-    print(f"User ID: {user_id}")
+    # print(f"Received token: {token}")
+    # print(f"User ID: {user_id}")
     user = User.verify_reset_token(token, user_id)
     if user is None:
         print("Token verification failed")
@@ -917,11 +947,18 @@ def profile():
         ):
             return redirect(url_for("profile"))
         else:
-            current_user.username = account_form.username.data
-            current_user.email = account_form.email.data.lower()
-            db.session.commit()
-            flash("Your Account Info has been updated successfully!", "success")
-            return redirect(url_for("profile"))
+            try:
+                current_user.username = account_form.username.data
+                current_user.email = account_form.email.data.lower()
+                db.session.commit()
+                flash("Your Account Info has been updated successfully!", "success")
+                return redirect(url_for("profile"))
+            except IntegrityError:
+                db.session.rollback()
+                flash(
+                    "Username or email already exists. Please choose different credentials.",
+                    "error",
+                )
 
     if password_form.password_submit.data and password_form.validate_on_submit():
         hashed_password = bcrypt.generate_password_hash(

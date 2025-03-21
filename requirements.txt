@@ -1,4 +1,4 @@
-cryptography==44.0.1
+cryptography==44.0.2
 Flask==3.1.0
 Flask_Bcrypt==1.0.1
 Flask_Cors==5.0.0
@@ -11,4 +11,5 @@ itsdangerous==2.2.0
 Pillow==11.1.0
 python-dotenv==1.0.1
 pytz==2024.2
+SQLAlchemy==2.0.35
 WTForms==3.2.1
