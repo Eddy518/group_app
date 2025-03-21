@@ -1,44 +1,21 @@
 import secrets
-import pytz
 from datetime import datetime
-from flask import (
-    flash,
-    jsonify,
-    redirect,
-    render_template,
-    request,
-    url_for,
-    session,
-    abort,
-)
-from flask_login import current_user, login_required, logout_user, login_user
+
+import pytz
+from flask import (abort, flash, jsonify, redirect, render_template, request,
+                   session, url_for)
+from flask_login import current_user, login_required, login_user, logout_user
 from flask_login.login_manager import timedelta
 from flask_mail import Message
-from myapp import resize_group_image
-
-from myapp import app, bcrypt, db, mail, socketio
-from myapp.form import (
-    LoginForm,
-    PasswordResetForm,
-    RegisterForm,
-    RequestResetForm,
-    UpdateAccountForm,
-    UpdatePasswordForm,
-    TwoFactorForm,
-    CreateGroupForm,
-    EditGroupForm,
-)
-from myapp.models import (
-    User,
-    Group,
-    GroupMessage,
-    GroupMember,
-    GroupPoints,
-    GroupBitzLog,
-)
-
 from flask_socketio import emit, join_room, leave_room
-from myapp.utils import handle_points, convert_to_local
+
+from myapp import app, bcrypt, db, mail, resize_group_image, socketio
+from myapp.form import (CreateGroupForm, EditGroupForm, LoginForm,
+                        PasswordResetForm, RegisterForm, RequestResetForm,
+                        TwoFactorForm, UpdateAccountForm, UpdatePasswordForm)
+from myapp.models import (Group, GroupBitzLog, GroupMember, GroupMessage,
+                          GroupPoints, User)
+from myapp.utils import convert_to_local, handle_points
 
 online_users = {}
 
@@ -883,7 +860,7 @@ def reset_request():
             )
             return redirect(url_for("login"))
         else:
-            flash("Email not found in our records.", "error")
+            flash("Invalid credentials. ", "error")
 
     return render_template("reset_request.html", form=form)
 
