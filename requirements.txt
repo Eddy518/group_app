@@ -13,3 +13,4 @@ python-dotenv==1.0.1
 pytz==2024.2
 SQLAlchemy==2.0.35
 WTForms==3.2.1
+email_validator==2.2.0
